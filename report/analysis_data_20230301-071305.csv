@@ -1,0 +1,6 @@
+Contract Type,Number of records
+No vulnerability,884273
+Frozen Ether,97305
+Timestamp dependence,54663
+Delegate call Injection,35155
+Leaking Ether to arbitrary address,590
