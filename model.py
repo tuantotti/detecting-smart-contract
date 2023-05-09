@@ -18,6 +18,8 @@ class Model:
         self.no_vul_label = no_vul_label
         self.num_opcode = num_opcode
         self.input_length = input_length
+        self.checkpoint_multi_filepath = './best_model_lstm_mi/best_model_multi.hdf5'
+        self.checkpoint_binary_filepath = './best_model_lstm_mi/best_model_binary.hdf5'
 
     def __call__(self, *args, **kwargs):
         self.run(max_epoch=1, n_folds=10, batch_size=128)
@@ -30,7 +32,8 @@ class Model:
     def build_multi_model(self) -> Any:
         pass
 
-    def create_class_weight(self, labels_dict, mu):
+    @staticmethod
+    def create_class_weight(labels_dict, mu):
         """Create weight based on the number of domain name in the dataset"""
         total = np.sum(list(labels_dict.values()))
         keys = labels_dict.keys()
@@ -72,12 +75,11 @@ class Model:
             print(collections.Counter(y_vul))
 
             # Build the model for binary classification
-            model_binary = self.build_model_binary()
+            model_binary = self.build_binary_model()
 
             # callback to save model
-            checkpoint_binary_filepath = './best_model_lstm_mi/best_model_binary.hdf5'
             model_checkpoint_callback = ModelCheckpoint(
-                filepath=checkpoint_binary_filepath,
+                filepath=self.checkpoint_binary_filepath,
                 monitor='val_loss',
                 mode='min',
                 save_best_only=True)
@@ -96,11 +98,10 @@ class Model:
             # Create class weight
             class_weight = self.create_class_weight(labels_dict=labels_dict, mu=0.6)
             # Build model
-            model_multi = self.build_multiclass_model()
+            model_multi = self.build_multi_model()
             # Callback to save the best model
-            checkpoint_multi_filepath = './best_model_lstm_mi/best_model_multi.hdf5'
             model_checkpoint_callback = ModelCheckpoint(
-                filepath=checkpoint_multi_filepath,
+                filepath=self.checkpoint_multi_filepath,
                 monitor='val_loss',
                 mode='min',
                 save_best_only=True)
@@ -112,8 +113,8 @@ class Model:
                             callbacks=[model_checkpoint_callback], validation_data=(X_holdout_multi, y_holdout_multi))
 
             # load the best model
-            best_model_binary = load_model(checkpoint_binary_filepath)
-            best_model_multi = load_model(checkpoint_multi_filepath)
+            best_model_binary = load_model(self.checkpoint_binary_filepath)
+            best_model_multi = load_model(self.checkpoint_multi_filepath)
 
             # calculate confusion matrix and combine to multilabel
             print("Predict ================")

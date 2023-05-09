@@ -2,8 +2,6 @@ import tensorflow as tf
 from keras.layers import Embedding, Dense, Layer, MultiHeadAttention, LayerNormalization, Dropout, \
     GlobalAveragePooling1D, Input
 from keras.models import Model
-from keras.preprocessing.text import Tokenizer
-from keras.utils import pad_sequences
 from tensorflow import keras
 
 import model
@@ -15,8 +13,10 @@ class Transformer(model.Model):
         self.embed_dim = embed_dim
         self.num_heads = num_heads
         self.ff_dim = ff_dim
+        self.checkpoint_multi_filepath = './transformer_model/best_model_multi'
+        self.checkpoint_binary_filepath = './transformer_model/best_model_binary'
 
-    def base_model(self, num_output, activation):
+    def base_model(self, num_output, activation, loss):
         inputs = Input(shape=(self.input_length,))
 
         # Embedding layer
@@ -37,39 +37,17 @@ class Transformer(model.Model):
         _model.summary()
 
         _model.compile(
-            optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"]
+            optimizer="adam", loss=loss, metrics=["accuracy"]
         )
 
         return _model
 
     def build_binary_model(self):
-        return self.base_model(num_output=1, activation='sigmoid')
+        return self.base_model(num_output=1, activation='sigmoid', loss="binary_crossentropy")
 
     def build_multi_model(self):
-        return self.base_model(num_output=self.num_class - 1, activation='softmax')
-
-
-class PreprocessData:
-    def __init__(self, dataset, _vocab_size, _max_sequence_length):
-        self.dataset = dataset
-        self.vocab_size = _vocab_size
-        self.max_sequence_length = _max_sequence_length
-
-    def nlp_preprocess(self, data):
-        tokenizer = Tokenizer(num_words=self.vocab_size, lower=False)
-
-        tokenizer.fit_on_texts(data['BYTECODE'].values)
-
-        sequences = tokenizer.texts_to_sequences(data['BYTECODE'].values)
-
-        _X = pad_sequences(sequences, maxlen=self.max_sequence_length)
-
-        return _X
-
-    def format_value(self, data, value):
-        data['LABEL'] = value
-        data = data[data['BYTECODE'].apply(lambda x: str(type(x)) == "<class 'str'>")]
-        return data
+        return self.base_model(num_output=self.num_class - 1, activation='softmax',
+                               loss="sparse_categorical_crossentropy")
 
 
 class TokenAndPositionEmbedding(Layer):
