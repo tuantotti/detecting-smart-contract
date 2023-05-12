@@ -4,14 +4,15 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 # TF-IDF
 class TfIdf:
 
-    def __init__(self, X):
-        self.corpus = X
+    def __init__(self, X_train, X_test):
+        self.X_train = X_train
+        self.X_test = X_test
         self.vectorized = TfidfVectorizer()
 
     def __call__(self, *args, **kwargs):
         # create vocabulary and calculate idf
-        self.vectorized.fit(self.corpus)
+        X_train = self.vectorized.fit_transform(raw_documents=self.X_train).toarray()
 
-        self.result = self.vectorized.transform(self.corpus)
+        X_test = self.vectorized.transform(raw_documents=self.X_test).toarray()
 
-        return self.result.toarray()
+        return X_train, X_test

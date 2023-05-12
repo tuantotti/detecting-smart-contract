@@ -15,9 +15,10 @@ def read_data():
         p = pd.read_csv(directory + _dir, usecols=['BYTECODE'])
         if p.shape[0] > 1000:
             if _dir == 'Contracts_No_Vul.csv':
-                p['LABEL'] = len(listdir) - 1
+                p = p.sample(n=175000, random_state=42)
+                p['LABEL'] = float(len(listdir) - 1)
             else:
-                p['LABEL'] = i
+                p['LABEL'] = float(i)
                 i += 1
 
             label_dict[p.loc[0, 'LABEL']] = _dir

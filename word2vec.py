@@ -88,11 +88,10 @@ dataset = read_data()
 X, y = dataset['BYTECODE'], dataset['LABEL']
 
 vocab_size = 300
-sequence_length = 100
 BATCH_SIZE = 1024
 BUFFER_SIZE = 10000
 num_ns = 4
-embedding_dim = 128
+embedding_dim = 64
 
 tokenizer = Tokenizer(num_words=vocab_size, lower=False)
 # Create vocabulary

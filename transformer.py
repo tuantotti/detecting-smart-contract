@@ -8,8 +8,9 @@ import model
 
 
 class Transformer(model.Model):
-    def __init__(self, _X, y, num_class, no_vul_label, num_opcode, input_length, embed_dim, num_heads, ff_dim):
-        super().__init__(_X, y, num_class, no_vul_label, num_opcode, input_length)
+    def __init__(self, X_train, X_test, y_train, y_test, num_class, no_vul_label, num_opcode, input_length, embed_dim,
+                 num_heads, ff_dim):
+        super().__init__(X_train, X_test, y_train, y_test, num_class, no_vul_label, num_opcode, input_length)
         self.embed_dim = embed_dim
         self.num_heads = num_heads
         self.ff_dim = ff_dim

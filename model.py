@@ -6,14 +6,12 @@ from typing import Any
 import numpy as np
 from keras.callbacks import ModelCheckpoint
 from keras.models import load_model
-from sklearn.metrics import classification_report
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.metrics import classification_report, confusion_matrix
 
 
 class Model:
-    def __init__(self, _X, y, num_class, no_vul_label, num_opcode, input_length):
-        self.X = _X
-        self.y = y
+    def __init__(self, X_train, X_test, y_train, y_test, num_class, no_vul_label, num_opcode, input_length):
+        self.X_train, self.X_test, self.y_train, self.y_test = X_train, X_test, y_train, y_test
         self.num_class = num_class
         self.no_vul_label = no_vul_label
         self.num_opcode = num_opcode
@@ -22,7 +20,7 @@ class Model:
         self.checkpoint_binary_filepath = './best_model_lstm_mi/best_model_binary.hdf5'
 
     def __call__(self, *args, **kwargs):
-        self.run(max_epoch=1, n_folds=10, batch_size=128)
+        self.run()
 
     @abstractmethod
     def build_binary_model(self) -> Any:
@@ -45,108 +43,85 @@ class Model:
 
         return class_weight
 
-    def run(self, max_epoch=1, n_folds=1, batch_size=128):
-        # binary label
-        y_binary = self.y.copy()
-        y_binary = np.where(y_binary == self.no_vul_label, 0, 1)
-        collections.Counter(y_binary)
-        # print(self.y[1082])
+    def prepare_data(self):
+        no_vul_binary_label = 0.
+        vul_binary_label = 1.
 
-        sss = StratifiedShuffleSplit(n_folds, test_size=0.2, random_state=0)
-        fold = 0
-        for train, test in sss.split(self.X, y_binary, self.y):
-            fold = fold + 1
-            print(train)
-            print("=============FOLD %d================" % fold)
-            # X_train, y_train use for evaluating binary model, X_test, y_test for testing binary model
-            X_train, X_test, y_train, y_test, y_mul_train, y_mul_test = \
-                self.X[train], self.X[test], y_binary[train], y_binary[test], self.y[train], self.y[test]
-            # X_vul, y_vul use for multiclass classification
-            y_vul = []
-            X_vul = []
-            # create the multilabel data train by removing the no-vul data
-            for i in range(len(y_mul_train)):
-                if y_mul_train[i] != self.no_vul_label:
-                    X_vul.append(X_train[i])
-                    y_vul.append(y_mul_train[i])
+        y_binary_train = self.y_train.copy()
+        y_binary_train = np.where(y_binary_train == self.no_vul_label, no_vul_binary_label, vul_binary_label)
 
-            X_vul = np.array(X_vul)
-            y_vul = np.array(y_vul)
-            print(collections.Counter(y_vul))
+        y_binary_test = self.y_test.copy()
+        y_binary_test = np.where(y_binary_test == self.no_vul_label, no_vul_binary_label, vul_binary_label)
 
-            # Build the model for binary classification
-            model_binary = self.build_binary_model()
+        # Data for vulnerable classification
+        vul_index = np.where(self.y_train != self.no_vul_label)
+        X_vul_train = self.X_train[vul_index]
+        y_vul_train = self.y_train[vul_index]
 
-            # callback to save model
-            model_checkpoint_callback = ModelCheckpoint(
-                filepath=self.checkpoint_binary_filepath,
-                monitor='val_loss',
-                mode='min',
-                save_best_only=True)
+        vul_index_pred = np.where(y_binary_test == vul_binary_label)
+        X_vul_test = self.X_test[vul_index_pred]
 
-            print(collections.Counter(y_train))
-            # Train model
-            model_binary.fit(X_train, y_train, batch_size=batch_size, epochs=max_epoch,
-                             callbacks=[model_checkpoint_callback], validation_split=0.05)
-            # Multiclass classification
-            # Split data
-            sss2 = StratifiedShuffleSplit(n_splits=1, test_size=0.05, random_state=0)
-            for train_multi, test_multi in sss2.split(X_vul, y_vul):
-                X_train_multi, X_holdout_multi, y_train_multi, y_holdout_multi = X_vul[train_multi], X_vul[test_multi], \
-                    y_vul[train_multi], y_vul[test_multi]
-            labels_dict = collections.Counter(y_train_multi)
-            # Create class weight
-            class_weight = self.create_class_weight(labels_dict=labels_dict, mu=0.6)
-            # Build model
-            model_multi = self.build_multi_model()
-            # Callback to save the best model
-            model_checkpoint_callback = ModelCheckpoint(
-                filepath=self.checkpoint_multi_filepath,
-                monitor='val_loss',
-                mode='min',
-                save_best_only=True)
-            # Train model
-            print(X_train_multi.shape)
-            print(collections.Counter(y_train_multi))
-            model_multi.fit(X_train_multi, y_train_multi, batch_size=batch_size, epochs=max_epoch,
-                            class_weight=class_weight,
-                            callbacks=[model_checkpoint_callback], validation_data=(X_holdout_multi, y_holdout_multi))
+        return y_binary_train, y_binary_test, X_vul_train, y_vul_train, X_vul_test
 
-            # load the best model
-            best_model_binary = load_model(self.checkpoint_binary_filepath)
-            best_model_multi = load_model(self.checkpoint_multi_filepath)
+    def run(self, max_epoch=10, batch_size=256):
+        y_binary_train, y_binary_test, X_vul_train, y_vul_train, X_vul_test = self.prepare_data()
 
-            # calculate confusion matrix and combine to multilabel
-            print("Predict ================")
-            y_pred_binary = best_model_binary.predict(X_test)
-            y_pred_binary = y_pred_binary.ravel()
-            y_pred_binary = [1 if (y_pred_binary[x] > 0.5) else self.no_vul_label for x in range(len(y_pred_binary))]
-            y_pred_binary = np.array(y_pred_binary)
-            print(collections.Counter(y_train))
+        """ Build the model for binary classification """
+        model_binary = self.build_binary_model()
 
-            X_dga_test = []
+        # callback to save model
+        binary_callback = ModelCheckpoint(
+            filepath=self.checkpoint_binary_filepath,
+            monitor='val_loss',
+            mode='min',
+            save_best_only=True)
 
-            for i in range(len(y_pred_binary)):
-                if y_pred_binary[i] == 1:
-                    X_dga_test.append(X_test[i])
+        # Train model
+        model_binary.fit(self.X_train, y_binary_train, batch_size=batch_size, epochs=max_epoch,
+                         callbacks=[binary_callback], validation_split=0.1)
 
-            X_dga_test = np.array(X_dga_test)
-            print(X_dga_test.shape)
+        """ Build model for multiclass classification """
+        labels_dict = collections.Counter(y_vul_train)
+        # Create class weight
+        class_weight = self.create_class_weight(labels_dict=labels_dict, mu=0.6)
+        # Build model
+        model_multi = self.build_multi_model()
+        # Callback to save the best model
+        multilabel_callback = ModelCheckpoint(
+            filepath=self.checkpoint_multi_filepath,
+            monitor='val_loss',
+            mode='min',
+            save_best_only=True)
+        # Train model
+        model_multi.fit(X_vul_train, y_vul_train, batch_size=batch_size, epochs=max_epoch,
+                        class_weight=class_weight,
+                        callbacks=[multilabel_callback], validation_split=0.1)
 
-            y_pred_multi = best_model_multi.predict(X_dga_test)
-            y_pred_multi = np.argmax(y_pred_multi, axis=1)
+        """ Load the best model """
+        best_model_binary = load_model(self.checkpoint_binary_filepath)
+        best_model_multi = load_model(self.checkpoint_multi_filepath)
 
-            # combine by replacing with compatible label
-            j = 0
-            for i in range(len(y_pred_binary)):
-                if y_pred_binary[i] == 1:
-                    y_pred_binary[i] = y_pred_multi[j]
-                    j = j + 1
+        """ Evaluation """
+        print("Predict ================")
+        y_pred_binary = best_model_binary.predict(self.X_test)
+        y_pred_binary = y_pred_binary.ravel()
+        y_pred_binary[y_pred_binary >= 0.5] = 1.
+        y_pred_binary[y_pred_binary < 0.5] = self.no_vul_label
 
-            print(y_pred_binary)
-            print(y_mul_test)
-            print(classification_report(y_pred_binary, y_mul_test))
-            # save report to csv
-            # classification_report_csv(y_pred_binary, y_mul_test)
+        print(classification_report(y_pred_binary, y_binary_test))
+        print(confusion_matrix(y_pred_binary, y_binary_test))
 
-            print("=============END FOLD %d=============" % fold)
+        y_pred_multi = best_model_multi.predict(X_vul_test)
+        y_pred_multi = np.argmax(y_pred_multi, axis=1)
+
+        """ Combine by replacing with compatible label """
+        j = 0
+        for i in range(len(y_pred_binary)):
+            if y_pred_binary[i] == 1.:
+                y_pred_binary[i] = y_pred_multi[j]
+                j = j + 1
+
+        print(y_pred_binary)
+        """ Result """
+        print(classification_report(y_pred_binary, self.y_test))
+        print(confusion_matrix(y_pred_binary, self.y_test))
