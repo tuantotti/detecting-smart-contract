@@ -1,3 +1,4 @@
+import pandas as pd
 import tensorflow as tf
 from keras.layers import Embedding
 from keras.losses import CategoricalCrossentropy
@@ -114,3 +115,12 @@ word2vec.compile(optimizer=Adam(),
                  loss=CategoricalCrossentropy(from_logits=True),
                  metrics=['accuracy'])
 word2vec.fit(dataset, epochs=20)
+
+weights = word2vec.get_layer('w2v_embedding').get_weights()[0]
+vocab = tokenizer.word_index
+
+weights_df = pd.DataFrame(weights)
+vocab_df = pd.DataFrame(vocab)
+
+weights_df.to_csv('./word2vec/vectors.csv', index=False)
+vocab_df.to_csv('./word2vec/vocab.csv', index=False)

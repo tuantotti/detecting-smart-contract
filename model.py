@@ -47,24 +47,32 @@ class Model:
         no_vul_binary_label = 0.
         vul_binary_label = 1.
 
+        no_vul_binary_label = 0.
+        vul_binary_label = 1.
+
         y_binary_train = self.y_train.copy()
         y_binary_train = np.where(y_binary_train == self.no_vul_label, no_vul_binary_label, vul_binary_label)
+        print('y_binary_train\n', collections.Counter(y_binary_train))
 
         y_binary_test = self.y_test.copy()
         y_binary_test = np.where(y_binary_test == self.no_vul_label, no_vul_binary_label, vul_binary_label)
+        print('y_binary_test\n', collections.Counter(y_binary_test))
 
         # Data for vulnerable classification
         vul_index = np.where(self.y_train != self.no_vul_label)
         X_vul_train = self.X_train[vul_index]
         y_vul_train = self.y_train[vul_index]
+        print('y_vul_train\n', collections.Counter(y_vul_train))
 
-        vul_index_pred = np.where(y_binary_test == vul_binary_label)
-        X_vul_test = self.X_test[vul_index_pred]
+        vul_index_test = np.where(y_binary_test == vul_binary_label)
+        X_vul_test = self.X_test[vul_index_test]
+        y_vul_test = self.y_test[vul_index_test]
+        print('y_vul_test\n', collections.Counter(y_vul_test))
 
-        return y_binary_train, y_binary_test, X_vul_train, y_vul_train, X_vul_test
+        return y_binary_train, y_binary_test, X_vul_train, y_vul_train, X_vul_test, y_vul_test
 
     def run(self, max_epoch=10, batch_size=256):
-        y_binary_train, y_binary_test, X_vul_train, y_vul_train, X_vul_test = self.prepare_data()
+        y_binary_train, y_binary_test, X_vul_train, y_vul_train, X_vul_test, y_vul_test = self.prepare_data()
 
         """ Build the model for binary classification """
         model_binary = self.build_binary_model()
@@ -107,21 +115,26 @@ class Model:
         y_pred_binary = y_pred_binary.ravel()
         y_pred_binary[y_pred_binary >= 0.5] = 1.
         y_pred_binary[y_pred_binary < 0.5] = self.no_vul_label
+        print('y_pred_binary\n', collections.Counter(y_pred_binary))
 
-        print(classification_report(y_pred_binary, y_binary_test))
-        print(confusion_matrix(y_pred_binary, y_binary_test))
+        print(classification_report(y_pred_binary, y_true=y_binary_test))
+        print(confusion_matrix(y_pred_binary, y_true=y_binary_test))
 
         y_pred_multi = best_model_multi.predict(X_vul_test)
         y_pred_multi = np.argmax(y_pred_multi, axis=1)
+        print('y_pred_multi\n', collections.Counter(y_pred_multi))
+        print(classification_report(y_true=y_vul_test, y_pred=y_pred_multi))
+        print(confusion_matrix(y_true=y_vul_test, y_pred=y_pred_multi))
 
         """ Combine by replacing with compatible label """
+        y_result = y_pred_binary.copy()
         j = 0
-        for i in range(len(y_pred_binary)):
-            if y_pred_binary[i] == 1.:
-                y_pred_binary[i] = y_pred_multi[j]
+        for i in range(len(y_result)):
+            if y_result[i] == 1.:
+                y_result[i] = y_pred_multi[j]
                 j = j + 1
 
-        print(y_pred_binary)
+        print('y_result\n', collections.Counter(y_result))
         """ Result """
-        print(classification_report(y_pred_binary, self.y_test))
-        print(confusion_matrix(y_pred_binary, self.y_test))
+        print(classification_report(y_pred_binary, y_true=self.y_test))
+        print(confusion_matrix(y_pred_binary, y_true=self.y_test))

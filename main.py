@@ -2,10 +2,8 @@ import os
 
 from sklearn.model_selection import train_test_split
 
-from feature_extraction_utils import TfIdf
+from feature_extraction_utils import Word2Vec
 from lstm_mi import LstmMiModel
-from machine_learning import MachineLearningModel
-from transformer import Transformer
 from utils_method import read_data
 
 
@@ -36,39 +34,42 @@ def run():
     print("================Feature extraction================")
     # X = nlp_preprocess(X, max_length, num_opcode=vocab_size)
     # TF-IDF
-    tf = TfIdf(X_train=X_train, X_test=X_test)
-    X_train_tfidf, X_test_tfidf = tf()
-    vocab_size = X_train_tfidf.shape[1]
+    # tf = TfIdf(X_train=X_train, X_test=X_test)
+    # X_train_tfidf, X_test_tfidf = tf()
+    # vocab_size = X_train_tfidf.shape[1]
+
+    word2vec = Word2Vec(max_length=max_length)
+    vocab_size, vectorizer, weights = word2vec()
 
     # pad to fix-length input
 
     # Classification
     print("================Classification================")
-    print("================MachineLearningModel naive_bayes================")
-    ml = MachineLearningModel(X_train_tfidf, X_test_tfidf, y_train, y_test,
-                              num_class=num_class, no_vul_label=no_vul_label,
-                              num_opcode=vocab_size, input_length=max_length, algorithm='naive_bayes')
-    ml()
-
-    print("================MachineLearningModel random_forest================")
-    ml = MachineLearningModel(X_train_tfidf, X_test_tfidf, y_train, y_test,
-                              num_class=num_class, no_vul_label=no_vul_label,
-                              num_opcode=vocab_size, input_length=max_length, algorithm='random_forest')
-    ml()
-
+    # print("================MachineLearningModel naive_bayes================")
+    # ml = MachineLearningModel(X_train_tfidf, X_test_tfidf, y_train, y_test,
+    #                           num_class=num_class, no_vul_label=no_vul_label,
+    #                           num_opcode=vocab_size, input_length=max_length, algorithm='naive_bayes')
+    # ml()
+    #
+    # print("================MachineLearningModel random_forest================")
+    # ml = MachineLearningModel(X_train_tfidf, X_test_tfidf, y_train, y_test,
+    #                           num_class=num_class, no_vul_label=no_vul_label,
+    #                           num_opcode=vocab_size, input_length=max_length, algorithm='random_forest')
+    # ml()
+    #
     print("================LstmMiModel================")
-    lstm_mi = LstmMiModel(X_train_tfidf, X_test_tfidf, y_train, y_test,
+    lstm_mi = LstmMiModel(X_train, X_test, y_train, y_test,
                           num_class=num_class, no_vul_label=no_vul_label,
                           num_opcode=vocab_size, input_length=max_length)
     lstm_mi()
-
-    print("================Transformer================")
-    embed_dim, num_heads, ff_dim = 64, 1, 128
-    trans = Transformer(X_train_tfidf, X_test_tfidf, y_train, y_test,
-                        num_class=num_class, no_vul_label=no_vul_label,
-                        num_opcode=vocab_size, input_length=max_length,
-                        embed_dim=embed_dim, num_heads=num_heads, ff_dim=ff_dim)
-    trans()
+    #
+    # print("================Transformer================")
+    # embed_dim, num_heads, ff_dim = 64, 1, 128
+    # trans = Transformer(X_train_tfidf, X_test_tfidf, y_train, y_test,
+    #                     num_class=num_class, no_vul_label=no_vul_label,
+    #                     num_opcode=vocab_size, input_length=max_length,
+    #                     embed_dim=embed_dim, num_heads=num_heads, ff_dim=ff_dim)
+    # trans()
 
 
 if __name__ == '__main__':
