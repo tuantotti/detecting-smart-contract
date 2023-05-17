@@ -1,11 +1,14 @@
 import collections
 import math
 from abc import abstractmethod
+from datetime import datetime
 from typing import Any
 
 import numpy as np
+import pandas as pd
 from keras.callbacks import ModelCheckpoint
 from keras.models import load_model
+from matplotlib import pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix
 
 
@@ -43,10 +46,25 @@ class Model:
 
         return class_weight
 
-    def prepare_data(self):
-        no_vul_binary_label = 0.
-        vul_binary_label = 1.
+    def save_confusion_matrix(self, cf_matrix):
+        ax = sns.heatmap(cf_matrix / np.sum(cf_matrix), annot=True,
+                         fmt='.2%', cmap='Blues')
 
+        ax.set_title('Confusion Matrix\n\n')
+        ax.set_xlabel('\nPredicted Contract Label')
+        ax.set_ylabel('Actual Contract Label');
+        ax.xaxis.set_ticklabels(['0', '1', '2', '3', '9'])
+        ax.yaxis.set_ticklabels(['0', '1', '2', '3', '9'])
+
+        plt.savefig(type(self).__name__ + "_confusion_matrix.png")
+
+    def save_result(self, test, pred):
+        out = classification_report(test, pred, output_dict=True)
+        out_df = pd.DataFrame(out).transpose()
+        out_dir = './report/' + type(self).__name__ + "_" + str(datetime.now()) + '.csv'
+        out_df.to_csv(out_dir)
+
+    def prepare_data(self):
         no_vul_binary_label = 0.
         vul_binary_label = 1.
 
@@ -64,15 +82,10 @@ class Model:
         y_vul_train = self.y_train[vul_index]
         print('y_vul_train\n', collections.Counter(y_vul_train))
 
-        vul_index_test = np.where(y_binary_test == vul_binary_label)
-        X_vul_test = self.X_test[vul_index_test]
-        y_vul_test = self.y_test[vul_index_test]
-        print('y_vul_test\n', collections.Counter(y_vul_test))
-
-        return y_binary_train, y_binary_test, X_vul_train, y_vul_train, X_vul_test, y_vul_test
+        return y_binary_train, y_binary_test, X_vul_train, y_vul_train
 
     def run(self, max_epoch=10, batch_size=256):
-        y_binary_train, y_binary_test, X_vul_train, y_vul_train, X_vul_test, y_vul_test = self.prepare_data()
+        y_binary_train, y_binary_test, X_vul_train, y_vul_train = self.prepare_data()
 
         """ Build the model for binary classification """
         model_binary = self.build_binary_model()
@@ -117,14 +130,19 @@ class Model:
         y_pred_binary[y_pred_binary < 0.5] = self.no_vul_label
         print('y_pred_binary\n', collections.Counter(y_pred_binary))
 
-        print(classification_report(y_pred_binary, y_true=y_binary_test))
-        print(confusion_matrix(y_pred_binary, y_true=y_binary_test))
+        print(classification_report(y_binary_test, y_pred_binary))
+        print(confusion_matrix(y_binary_test, y_pred_binary))
+
+        vul_index_test = np.where(y_pred_binary == 1.)
+        X_vul_test = self.X_test[vul_index_test]
+        y_vul_test = self.y_test[vul_index_test]
+        print('y_vul_test\n', collections.Counter(y_vul_test))
 
         y_pred_multi = best_model_multi.predict(X_vul_test)
         y_pred_multi = np.argmax(y_pred_multi, axis=1)
         print('y_pred_multi\n', collections.Counter(y_pred_multi))
-        print(classification_report(y_true=y_vul_test, y_pred=y_pred_multi))
-        print(confusion_matrix(y_true=y_vul_test, y_pred=y_pred_multi))
+        print(classification_report(y_vul_test, y_pred_multi))
+        print(confusion_matrix(y_vul_test, y_pred_multi))
 
         """ Combine by replacing with compatible label """
         y_result = y_pred_binary.copy()
@@ -136,5 +154,9 @@ class Model:
 
         print('y_result\n', collections.Counter(y_result))
         """ Result """
-        print(classification_report(y_pred_binary, y_true=self.y_test))
-        print(confusion_matrix(y_pred_binary, y_true=self.y_test))
+        print(classification_report(self.y_test, y_pred_binary))
+        print(confusion_matrix(self.y_test, y_pred_binary))
+
+        self.save_confusion_matrix(confusion_matrix(self.y_test, y_pred_binary))
+
+        self.save_result(self.y_test, y_pred_binary)

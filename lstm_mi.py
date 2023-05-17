@@ -41,7 +41,7 @@ class LstmMiModel(Model):
 
         model.add(LSTM(128, dropout=0.1, recurrent_dropout=0.5, return_sequences=True))
         model.add(LSTM(128, activation='relu', dropout=0.1, recurrent_dropout=0.5))
-        model.add(Dense(self.num_class - 1, activation='softmax'))
+        model.add(Dense(self.num_class, activation='softmax'))
 
         model.summary()
 

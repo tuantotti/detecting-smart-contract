@@ -47,7 +47,7 @@ class Transformer(model.Model):
         return self.base_model(num_output=1, activation='sigmoid', loss="binary_crossentropy")
 
     def build_multi_model(self):
-        return self.base_model(num_output=self.num_class - 1, activation='softmax',
+        return self.base_model(num_output=self.num_class, activation='softmax',
                                loss="sparse_categorical_crossentropy")
 
 
