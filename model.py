@@ -101,6 +101,26 @@ class Model:
         model_binary.fit(self.X_train, y_binary_train, batch_size=batch_size, epochs=max_epoch,
                          callbacks=[binary_callback], validation_split=0.1)
 
+        print("========Binary Predict ================")
+        best_model_binary = load_model(self.checkpoint_binary_filepath)
+        y_pred_binary = best_model_binary.predict(self.X_test)
+        y_pred_binary = y_pred_binary.ravel()
+        y_pred_binary[y_pred_binary >= 0.5] = 1.
+        y_pred_binary[y_pred_binary < 0.5] = self.no_vul_label
+        print('y_pred_binary\n', collections.Counter(y_pred_binary))
+
+        print(classification_report(y_binary_test, y_pred_binary))
+        print(confusion_matrix(y_binary_test, y_pred_binary))
+
+        if len(collections.Counter(y_pred_binary)) == 1:
+            print(classification_report(self.y_test, y_pred_binary))
+            print(confusion_matrix(self.y_test, y_pred_binary))
+
+            self.save_confusion_matrix(confusion_matrix(self.y_test, y_pred_binary))
+
+            self.save_result(self.y_test, y_pred_binary)
+            return
+
         """ Build model for multiclass classification """
         labels_dict = collections.Counter(y_vul_train)
         # Create class weight
@@ -119,20 +139,9 @@ class Model:
                         callbacks=[multilabel_callback], validation_split=0.1)
 
         """ Load the best model """
-        best_model_binary = load_model(self.checkpoint_binary_filepath)
         best_model_multi = load_model(self.checkpoint_multi_filepath)
 
         """ Evaluation """
-        print("Predict ================")
-        y_pred_binary = best_model_binary.predict(self.X_test)
-        y_pred_binary = y_pred_binary.ravel()
-        y_pred_binary[y_pred_binary >= 0.5] = 1.
-        y_pred_binary[y_pred_binary < 0.5] = self.no_vul_label
-        print('y_pred_binary\n', collections.Counter(y_pred_binary))
-
-        print(classification_report(y_binary_test, y_pred_binary))
-        print(confusion_matrix(y_binary_test, y_pred_binary))
-
         vul_index_test = np.where(y_pred_binary == 1.)
         X_vul_test = self.X_test[vul_index_test]
         y_vul_test = self.y_test[vul_index_test]
@@ -154,9 +163,9 @@ class Model:
 
         print('y_result\n', collections.Counter(y_result))
         """ Result """
-        print(classification_report(self.y_test, y_pred_binary))
-        print(confusion_matrix(self.y_test, y_pred_binary))
+        print(classification_report(self.y_test, y_result))
+        print(confusion_matrix(self.y_test, y_result))
 
-        self.save_confusion_matrix(confusion_matrix(self.y_test, y_pred_binary))
+        self.save_confusion_matrix(confusion_matrix(self.y_test, y_result))
 
-        self.save_result(self.y_test, y_pred_binary)
+        self.save_result(self.y_test, y_result)
