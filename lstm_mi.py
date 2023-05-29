@@ -1,50 +1,52 @@
-from keras.layers import Embedding, LSTM, Dense
-from keras.models import Sequential
+import keras
+from keras import Input
+from keras.layers import Embedding, LSTM, Dense, Dropout
+from keras.optimizers import Adam
+from tensorflow.python.keras.regularizers import l1
 
 from model import Model
 
 
 class LstmMiModel(Model):
     def __init__(self, X_train, X_test, y_train, y_test, num_class, no_vul_label, num_opcode, input_length,
-                 vectorizer=None, weights=None):
-        super().__init__(X_train, X_test, y_train, y_test, num_class, no_vul_label, num_opcode, input_length)
-        self.vectorizer = vectorizer
+                 weights=None, is_set_weight=True, save_path="./report/bow_lstm_weight.csv"):
+        super().__init__(X_train, X_test, y_train, y_test, num_class, no_vul_label, num_opcode, input_length,
+                         is_set_weight, save_path)
         self.weights = weights
 
     def __call__(self, *args, **kwargs):
         self.run()
 
-    def build_base_model(self):
-        model = Sequential()
-        if self.vectorizer is not None:
-            model.add(self.vectorizer)
-            model.add(Embedding(input_dim=self.num_opcode, output_dim=128, input_length=self.input_length,
-                                weights=self.weights))
-        else:
-            model.add(Embedding(input_dim=self.num_opcode, output_dim=128, input_length=self.input_length))
+    def build_base_lstm_model(self, num_output, activation, loss, metric):
+        inputs = Input(shape=(self.input_length,))
+        embeddings = Embedding(input_dim=self.num_opcode, output_dim=128, weights=self.weights)(inputs)
 
-        return model
+        x = LSTM(units=256, kernel_regularizer=l1(0.000001), return_sequences=True)(embeddings)
+        x = Dropout(rate=0.2)(x)
+        x = LSTM(units=128, kernel_regularizer=l1(0.000001))(x)
+        x = Dropout(rate=0.2)(x)
+        x = Dense(64, activation='relu')(x)
+        outputs = Dense(num_output, activation=activation)(x)
+
+        _model = keras.models.Model(inputs=inputs, outputs=outputs)
+        _model.summary()
+
+        adam = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
+
+        _model.compile(
+            optimizer=adam, loss=loss, metrics=[metric]
+        )
+
+        return _model
 
     def build_binary_model(self):
-        model = self.build_base_model()
+        model = self.build_base_lstm_model(num_output=1, activation='sigmoid',
+                                           loss='binary_crossentropy', metric='binary_accuracy')
 
-        model.add(LSTM(128, dropout=0.1, recurrent_dropout=0.5, return_sequences=True))
-        model.add(LSTM(128, activation='relu', dropout=0.1, recurrent_dropout=0.5))
-        model.add(Dense(units=1, activation='sigmoid'))
-        model.summary()
-
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['binary_accuracy'])
         return model
 
     def build_multi_model(self):
-        model = self.build_base_model()
-
-        model.add(LSTM(128, dropout=0.1, recurrent_dropout=0.5, return_sequences=True))
-        model.add(LSTM(128, activation='relu', dropout=0.1, recurrent_dropout=0.5))
-        model.add(Dense(self.num_class, activation='softmax'))
-
-        model.summary()
-
-        model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model = self.build_base_lstm_model(num_output=self.num_class - 1, activation='softmax',
+                                           loss='sparse_categorical_crossentropy', metric='accuracy')
 
         return model

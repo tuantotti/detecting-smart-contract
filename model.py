@@ -8,19 +8,21 @@ import numpy as np
 import pandas as pd
 from keras.callbacks import ModelCheckpoint
 from keras.models import load_model
-from matplotlib import pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix
 
 
 class Model:
-    def __init__(self, X_train, X_test, y_train, y_test, num_class, no_vul_label, num_opcode, input_length):
+    def __init__(self, X_train, X_test, y_train, y_test, num_class, no_vul_label, num_opcode, input_length,
+                 is_set_weight=True, save_path="./report/bow_lstm_weight.csv"):
         self.X_train, self.X_test, self.y_train, self.y_test = X_train, X_test, y_train, y_test
         self.num_class = num_class
         self.no_vul_label = no_vul_label
         self.num_opcode = num_opcode
         self.input_length = input_length
+        self.is_set_weight = is_set_weight
         self.checkpoint_multi_filepath = './best_model_lstm_mi/best_model_multi.hdf5'
         self.checkpoint_binary_filepath = './best_model_lstm_mi/best_model_binary.hdf5'
+        self.save_path = save_path
 
     def __call__(self, *args, **kwargs):
         self.run()
@@ -45,18 +47,6 @@ class Model:
             class_weight[key] = score
 
         return class_weight
-
-    def save_confusion_matrix(self, cf_matrix):
-        ax = sns.heatmap(cf_matrix / np.sum(cf_matrix), annot=True,
-                         fmt='.2%', cmap='Blues')
-
-        ax.set_title('Confusion Matrix\n\n')
-        ax.set_xlabel('\nPredicted Contract Label')
-        ax.set_ylabel('Actual Contract Label');
-        ax.xaxis.set_ticklabels(['0', '1', '2', '3', '9'])
-        ax.yaxis.set_ticklabels(['0', '1', '2', '3', '9'])
-
-        plt.savefig(type(self).__name__ + "_confusion_matrix.png")
 
     def save_result(self, test, pred):
         out = classification_report(test, pred, output_dict=True)
@@ -116,8 +106,6 @@ class Model:
             print(classification_report(self.y_test, y_pred_binary))
             print(confusion_matrix(self.y_test, y_pred_binary))
 
-            self.save_confusion_matrix(confusion_matrix(self.y_test, y_pred_binary))
-
             self.save_result(self.y_test, y_pred_binary)
             return
 
@@ -134,9 +122,14 @@ class Model:
             mode='min',
             save_best_only=True)
         # Train model
-        model_multi.fit(X_vul_train, y_vul_train, batch_size=batch_size, epochs=max_epoch,
-                        class_weight=class_weight,
-                        callbacks=[multilabel_callback], validation_split=0.1)
+
+        if self.is_set_weight:
+            model_multi.fit(X_vul_train, y_vul_train, batch_size=batch_size, epochs=max_epoch,
+                            class_weight=class_weight,
+                            callbacks=[multilabel_callback], validation_split=0.1)
+        else:
+            model_multi.fit(X_vul_train, y_vul_train, batch_size=batch_size, epochs=max_epoch,
+                            callbacks=[multilabel_callback], validation_split=0.1)
 
         """ Load the best model """
         best_model_multi = load_model(self.checkpoint_multi_filepath)
@@ -145,6 +138,10 @@ class Model:
         vul_index_test = np.where(y_pred_binary == 1.)
         X_vul_test = self.X_test[vul_index_test]
         y_vul_test = self.y_test[vul_index_test]
+        """Remove the no vul contract that classify wrong to vul contract"""
+        true_index = np.where(y_vul_test != self.no_vul_label)
+        X_vul_test = X_vul_test[true_index]
+        y_vul_test = y_vul_test[true_index]
         print('y_vul_test\n', collections.Counter(y_vul_test))
 
         y_pred_multi = best_model_multi.predict(X_vul_test)
@@ -165,7 +162,5 @@ class Model:
         """ Result """
         print(classification_report(self.y_test, y_result))
         print(confusion_matrix(self.y_test, y_result))
-
-        self.save_confusion_matrix(confusion_matrix(self.y_test, y_result))
 
         self.save_result(self.y_test, y_result)

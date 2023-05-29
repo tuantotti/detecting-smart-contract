@@ -13,31 +13,33 @@ def read_data():
     i = 0
     for _dir in listdir:
         p = pd.read_csv(directory + _dir, usecols=['BYTECODE'])
-        if p.shape[0] > 1000:
-            if _dir == 'Contracts_No_Vul.csv':
-                p = p.sample(n=175000, random_state=42)
-                p['LABEL'] = float(len(listdir) - 1)
-            else:
-                p['LABEL'] = float(i)
-                i += 1
+        if _dir == 'Contracts_No_Vul.csv':
+            p.drop_duplicates(inplace=True)
+            p['LABEL'] = float(len(listdir) - 1)
+        else:
+            # p = p[:9704]
+            p['LABEL'] = float(i)
+            i += 1
 
-            label_dict[p.loc[0, 'LABEL']] = _dir
-            p = p[p['BYTECODE'].apply(lambda x: str(type(x)) == "<class 'str'>")]
-            dataset = pd.concat([dataset, p])
-    print(label_dict)
-    return dataset
+        label_dict[p.loc[0, 'LABEL']] = _dir.split('.csv')[0]
+        p = p[p['BYTECODE'].apply(lambda x: str(type(x)) == "<class 'str'>")]
+        dataset = pd.concat([dataset, p])
+    
+    label_dict = dict(sorted(label_dict.items()))
+    
+    return dataset, label_dict
 
 
-def nlp_preprocess(X, max_length, num_opcode):
-    tokenizer = Tokenizer(num_words=num_opcode, lower=False)
+def nlp_preprocess(X, max_length):
+    tokenizer = Tokenizer(lower=False)
 
     # Create vocabulary
-    tokenizer.fit_on_texts(X.values)
+    tokenizer.fit_on_texts(X)
 
     # Transforms each text in texts to a sequence of integers
-    sequences = tokenizer.texts_to_sequences(X.values)
+    sequences = tokenizer.texts_to_sequences(X)
 
     # Pads sequences to the same length
     _X = pad_sequences(sequences, maxlen=max_length)
 
-    return _X
+    return _X, tokenizer.word_index

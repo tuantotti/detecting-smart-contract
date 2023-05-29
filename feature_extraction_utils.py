@@ -1,6 +1,6 @@
-from keras.layers import TextVectorization
-from sklearn.feature_extraction.text import TfidfVectorizer
-import pandas as pd
+import numpy as np
+from gensim.models import FastText
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
 
 # TF-IDF
@@ -21,17 +21,36 @@ class TfIdf:
 
 
 class Word2Vec:
-    def __init__(self, max_length):
-        self.max_length = max_length
+    def __init__(self, word_index):
+        self.word_index = word_index
+        self.fasttext_model = FastText.load('./word2vec/fasttext_model.model')
 
     def __call__(self, *args, **kwargs):
-        weights_df = pd.read_csv('./word2vec/vectors.csv')
-        vocab_df = pd.read_csv('./word2vec/vocab.csv').to_numpy().ravel()
-        vocab_size = vocab_df.shape[0]
+        vocab_size = len(self.word_index) + 1
+        output_dim = 128
+        print(vocab_size)
+        embedding_matrix = np.random.random((vocab_size, output_dim))
+        for word, i in self.word_index.items():
+            try:
+                embedding_vector = self.fasttext_model.wv[word]
+            except:
+                print(word, 'not found')
+            if embedding_vector is not None:
+                embedding_matrix[i, :] = embedding_vector
 
-        vectorizer = TextVectorization(max_tokens=vocab_size,
-                                       output_mode='int',
-                                       output_sequence_length=self.max_length,
-                                       vocabulary=vocab_df)
+        return embedding_matrix
 
-        return vocab_size, vectorizer, weights_df.to_numpy()
+
+class BagOfWord:
+    def __init__(self, X_train, X_test):
+        self.ngram_range = (1, 1)
+        self.X_train, self.X_test = X_train, X_test
+
+        self.vectorizer = CountVectorizer(analyzer='word', input='content', ngram_range=self.ngram_range,
+                                          max_features=None)
+
+    def __call__(self, *args, **kwargs):
+        X_train_bow = self.vectorizer.fit_transform(self.X_train).toarray()
+        X_test_bow = self.vectorizer.transform(self.X_test).toarray()
+
+        return X_train_bow, X_test_bow
