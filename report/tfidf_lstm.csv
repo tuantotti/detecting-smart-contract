@@ -1,0 +1,13 @@
+,precision,recall,f1-score,support
+Ugradeable contract,0.0,0.0,0.0,3.0
+Outdated Solidity version,0.5887864329682826,1.0,0.7411775689301051,23817.0
+Delegatecall Injection,0.0,0.0,0.0,1802.0
+Unprotected Suicide,0.0,0.0,0.0,2.0
+Authentication through tx.origin,0.0,0.0,0.0,1.0
+Timestamp dependence,0.0,0.0,0.0,694.0
+Frozen Ether,0.0,0.0,0.0,7715.0
+Leaking Ether to arbitrary address,0.0,0.0,0.0,46.0
+Contracts_No_Vul,0.0,0.0,0.0,6371.0
+accuracy,0.5887864329682826,0.5887864329682826,0.5887864329682826,0.5887864329682826
+macro avg,0.06542071477425362,0.1111111111111111,0.08235306321445612,40451.0
+weighted avg,0.34666946364751394,0.5887864329682826,0.43639529700646,40451.0

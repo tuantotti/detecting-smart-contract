@@ -11,8 +11,12 @@ import model
 
 
 class MachineLearningModel(model.Model):
-    def __init__(self, X_train, X_test, y_train, y_test, num_class, no_vul_label, num_opcode, input_length, algorithm):
-        super().__init__(X_train, X_test, y_train, y_test, num_class, no_vul_label, num_opcode, input_length)
+    def __init__(self, X_train, X_test, y_train, y_test, num_class, no_vul_label, num_opcode, input_length, algorithm,
+                 weights=None, is_set_weight=True, save_path="./report/bow_lstm_weight.csv",
+                 checkpoint_multi_filepath='./best_model_lstm_mi/best_model_multi.hdf5',
+                 checkpoint_binary_filepath='./best_model_lstm_mi/best_model_binary.hdf5'):
+        super().__init__(X_train, X_test, y_train, y_test, num_class, no_vul_label, num_opcode, input_length,
+                         is_set_weight, save_path, checkpoint_multi_filepath, checkpoint_binary_filepath)
         self.algorithm = algorithm
         self.svc = SVC(probability=True, kernel='linear')
 
@@ -27,7 +31,7 @@ class MachineLearningModel(model.Model):
             rf = RandomForestClassifier()
             return rf
         else:
-            ada = AdaBoostClassifier(n_estimators=50, estimator=self.svc, learning_rate=1)
+            ada = AdaBoostClassifier(n_estimators=10, learning_rate=1)
             return ada
 
     def build_multi_model(self) -> Any:
@@ -38,7 +42,7 @@ class MachineLearningModel(model.Model):
             rf = RandomForestClassifier()
             return rf
         else:
-            ada = AdaBoostClassifier(n_estimators=50, estimator=self.svc, learning_rate=1)
+            ada = AdaBoostClassifier(n_estimators=10, learning_rate=1)
             return ada
 
     def run(self):

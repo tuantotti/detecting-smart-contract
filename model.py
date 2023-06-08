@@ -1,7 +1,6 @@
 import collections
 import math
 from abc import abstractmethod
-from datetime import datetime
 from typing import Any
 
 import numpy as np
@@ -13,15 +12,17 @@ from sklearn.metrics import classification_report, confusion_matrix
 
 class Model:
     def __init__(self, X_train, X_test, y_train, y_test, num_class, no_vul_label, num_opcode, input_length,
-                 is_set_weight=True, save_path="./report/bow_lstm_weight.csv"):
+                 is_set_weight=True, save_path="./report/bow_lstm_weight.csv",
+                 checkpoint_multi_filepath='./best_model_lstm_mi/best_model_multi.hdf5',
+                 checkpoint_binary_filepath='./best_model_lstm_mi/best_model_binary.hdf5'):
         self.X_train, self.X_test, self.y_train, self.y_test = X_train, X_test, y_train, y_test
         self.num_class = num_class
         self.no_vul_label = no_vul_label
         self.num_opcode = num_opcode
         self.input_length = input_length
         self.is_set_weight = is_set_weight
-        self.checkpoint_multi_filepath = './best_model_lstm_mi/best_model_multi.hdf5'
-        self.checkpoint_binary_filepath = './best_model_lstm_mi/best_model_binary.hdf5'
+        self.checkpoint_multi_filepath = checkpoint_multi_filepath
+        self.checkpoint_binary_filepath = checkpoint_binary_filepath
         self.save_path = save_path
 
     def __call__(self, *args, **kwargs):
@@ -51,8 +52,7 @@ class Model:
     def save_result(self, test, pred):
         out = classification_report(test, pred, output_dict=True)
         out_df = pd.DataFrame(out).transpose()
-        out_dir = './report/' + type(self).__name__ + "_" + str(datetime.now()) + '.csv'
-        out_df.to_csv(out_dir)
+        out_df.to_csv(self.save_path)
 
     def prepare_data(self):
         no_vul_binary_label = 0.
@@ -60,21 +60,18 @@ class Model:
 
         y_binary_train = self.y_train.copy()
         y_binary_train = np.where(y_binary_train == self.no_vul_label, no_vul_binary_label, vul_binary_label)
-        print('y_binary_train\n', collections.Counter(y_binary_train))
 
         y_binary_test = self.y_test.copy()
         y_binary_test = np.where(y_binary_test == self.no_vul_label, no_vul_binary_label, vul_binary_label)
-        print('y_binary_test\n', collections.Counter(y_binary_test))
 
         # Data for vulnerable classification
         vul_index = np.where(self.y_train != self.no_vul_label)
         X_vul_train = self.X_train[vul_index]
         y_vul_train = self.y_train[vul_index]
-        print('y_vul_train\n', collections.Counter(y_vul_train))
 
         return y_binary_train, y_binary_test, X_vul_train, y_vul_train
 
-    def run(self, max_epoch=10, batch_size=256):
+    def run(self, max_epoch=1, batch_size=256):
         y_binary_train, y_binary_test, X_vul_train, y_vul_train = self.prepare_data()
 
         """ Build the model for binary classification """
@@ -96,11 +93,10 @@ class Model:
         y_pred_binary = best_model_binary.predict(self.X_test)
         y_pred_binary = y_pred_binary.ravel()
         y_pred_binary[y_pred_binary >= 0.5] = 1.
-        y_pred_binary[y_pred_binary < 0.5] = self.no_vul_label
-        print('y_pred_binary\n', collections.Counter(y_pred_binary))
-
+        y_pred_binary[y_pred_binary < 0.5] = 0.
         print(classification_report(y_binary_test, y_pred_binary))
         print(confusion_matrix(y_binary_test, y_pred_binary))
+        y_pred_binary[y_pred_binary == 0.] = self.no_vul_label
 
         if len(collections.Counter(y_pred_binary)) == 1:
             print(classification_report(self.y_test, y_pred_binary))
@@ -138,15 +134,11 @@ class Model:
         vul_index_test = np.where(y_pred_binary == 1.)
         X_vul_test = self.X_test[vul_index_test]
         y_vul_test = self.y_test[vul_index_test]
-        """Remove the no vul contract that classify wrong to vul contract"""
-        true_index = np.where(y_vul_test != self.no_vul_label)
-        X_vul_test = X_vul_test[true_index]
-        y_vul_test = y_vul_test[true_index]
-        print('y_vul_test\n', collections.Counter(y_vul_test))
+        y_vul_test[y_vul_test == 9.] = 1.
+
 
         y_pred_multi = best_model_multi.predict(X_vul_test)
         y_pred_multi = np.argmax(y_pred_multi, axis=1)
-        print('y_pred_multi\n', collections.Counter(y_pred_multi))
         print(classification_report(y_vul_test, y_pred_multi))
         print(confusion_matrix(y_vul_test, y_pred_multi))
 
@@ -158,7 +150,6 @@ class Model:
                 y_result[i] = y_pred_multi[j]
                 j = j + 1
 
-        print('y_result\n', collections.Counter(y_result))
         """ Result """
         print(classification_report(self.y_test, y_result))
         print(confusion_matrix(self.y_test, y_result))

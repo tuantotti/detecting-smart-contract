@@ -60,14 +60,18 @@ def run():
     print("================LstmMiModel================")
     lstm_mi = LstmMiModel(X_train_tfidf, X_test_tfidf, y_train, y_test,
                           num_class=num_class, no_vul_label=no_vul_label,
-                          num_opcode=vocab_size, input_length=max_length, save_path="./report/tfidf_lstm_weight.csv")
+                          num_opcode=vocab_size, input_length=max_length, save_path="./report/tfidf_lstm_weight.csv",
+                          checkpoint_multi_filepath='./best_model_lstm_mi/best_model_multi_tfidf.hdf5',
+                          checkpoint_binary_filepath='./best_model_lstm_mi/best_model_binary_tfidf.hdf5')
     lstm_mi()
 
     print("================LstmMiModel no weight================")
     lstm_mi = LstmMiModel(X_train_tfidf, X_test_tfidf, y_train, y_test,
                           num_class=num_class, no_vul_label=no_vul_label,
                           num_opcode=vocab_size, input_length=max_length, is_set_weight=False,
-                          save_path="./report/tfidf_lstm_no_weight.csv")
+                          save_path="./report/tfidf_lstm_no_weight.csv",
+                          checkpoint_multi_filepath='./best_model_lstm_mi/best_model_multi_tfidf_no_weight.hdf5',
+                          checkpoint_binary_filepath='./best_model_lstm_mi/best_model_binary_tfidf_no_weight.hdf5')
     lstm_mi()
 
 
