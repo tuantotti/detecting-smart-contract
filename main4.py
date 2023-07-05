@@ -58,19 +58,19 @@ def run():
     #                           save_path="./report/fasttext_nb.csv")
     # ml()
     #
-    # print("================MachineLearningModel Random Forest================")
-    # ml = MachineLearningModel(X_train, X_test, y_train, y_test,
-    #                           num_class=num_class, no_vul_label=no_vul_label,
-    #                           num_opcode=vocab_size, input_length=max_length, algorithm='random_forest',
-    #                           save_path="./report/fasttext_rf.csv")
-    # ml()
-
-    print("================MachineLearningModel Adaboost================")
+    print("================MachineLearningModel Random Forest================")
     ml = MachineLearningModel(X_train, X_test, y_train, y_test,
                               num_class=num_class, no_vul_label=no_vul_label,
-                              num_opcode=vocab_size, input_length=max_length, algorithm='adaboost',
-                              save_path="./report/fasttext_adaboost.csv")
+                              num_opcode=vocab_size, input_length=max_length, algorithm='random_forest',
+                              save_path="./report/fasttext_rf_hyperparameter.csv")
     ml()
+
+    # print("================MachineLearningModel Adaboost================")
+    # ml = MachineLearningModel(X_train, X_test, y_train, y_test,
+    #                           num_class=num_class, no_vul_label=no_vul_label,
+    #                           num_opcode=vocab_size, input_length=max_length, algorithm='adaboost',
+    #                           save_path="./report/fasttext_adaboost.csv")
+    # ml()
 
     # print("================ANN Model================")
     # ann = ANN(X_train, X_test, y_train, y_test,
