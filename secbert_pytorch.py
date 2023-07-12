@@ -8,37 +8,14 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
 from transformers import BertTokenizerFast, BertForSequenceClassification
 
+from utils_method import read_data
+
 if torch.cuda.is_available():
     dev = "cuda:0"
 else:
     dev = "cpu"
 device = torch.device(dev)
 print("device: ", device)
-
-
-def read_data():
-    directory = os.getcwd() + '/data/'
-    label_dict = {}
-    listdir = os.listdir(directory)
-    dataset = pd.DataFrame(columns=['BYTECODE', 'LABEL'])
-    i = 0
-    for _dir in listdir:
-        p = pd.read_csv(directory + _dir, usecols=['BYTECODE'])
-        p.drop_duplicates(inplace=True)
-        if _dir == 'Contracts_No_Vul.csv':
-            p['LABEL'] = len(listdir) - 1
-            print(p['LABEL'].value_counts())
-        else:
-            p['LABEL'] = i
-            i += 1
-
-        label_dict[p.loc[0, 'LABEL']] = _dir.split('.csv')[0]
-        p = p[p['BYTECODE'].apply(lambda x: str(type(x)) == "<class 'str'>")]
-        dataset = pd.concat([dataset, p])
-
-    label_dict = dict(sorted(label_dict.items()))
-
-    return dataset, label_dict
 
 
 class OpcodeData(Dataset):

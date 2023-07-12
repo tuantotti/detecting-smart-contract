@@ -3,7 +3,6 @@ from gensim.models import FastText
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
 
-# TF-IDF
 class TfIdf:
 
     def __init__(self, X_train, X_test):
@@ -39,6 +38,11 @@ class Word2Vec:
                 embedding_matrix[i, :] = embedding_vector
 
         return embedding_matrix
+
+    def train_vocab(self, X, embedding_dim):
+        sentences = [sentence.split() for sentence in X]
+        model = FastText(vector_size=embedding_dim, window=6, min_count=1, sentences=sentences, epochs=20)
+        model.save('./word2vec/fasttext_model.model')
 
 
 class BagOfWord:
