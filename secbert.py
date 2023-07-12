@@ -6,8 +6,7 @@ import torch
 from sklearn.metrics import f1_score, accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
-from transformers import RobertaForSequenceClassification, \
-    RobertaTokenizer
+from transformers import BertTokenizerFast, BertForSequenceClassification
 
 if torch.cuda.is_available():
     dev = "cuda:0"
@@ -248,7 +247,9 @@ def predict(testing_loader, model, loss_f):
     return total_preds
 
 
-def train_binary(training_loader, validating_loader, optimizer):
+def train_binary(binary_secBERT_encoder, training_loader, validating_loader, optimizer):
+    print('Train Binary Model')
+    binary_secBERT_encoder.to(device)
     loss_function = torch.nn.CrossEntropyLoss()
     # set initial loss to infinite
     best_valid_loss = float('inf')
@@ -258,15 +259,15 @@ def train_binary(training_loader, validating_loader, optimizer):
     valid_losses = []
 
     for epoch in range(EPOCHS):
-        print('\n Epoch {:} / {:}'.format(epoch + 1, EPOCHS))
-        train_loss, train_acc, train_f1 = train_steps(training_loader, binary_secroBERTa_encoder, loss_function,
+        print('\nEpoch ', (epoch + 1), '/', EPOCHS)
+        train_loss, train_acc, train_f1 = train_steps(training_loader, binary_secBERT_encoder, loss_function,
                                                       optimizer)
-        valid_loss, valid_acc, valid_f1 = evaluate_steps(validating_loader, binary_secroBERTa_encoder, loss_function)
+        valid_loss, valid_acc, valid_f1 = evaluate_steps(validating_loader, binary_secBERT_encoder, loss_function)
 
         # save the best model
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
-            torch.save(binary_secroBERTa_encoder.state_dict(), './trained/bert/binary_saved_weights.pt')
+            torch.save(binary_secBERT_encoder.state_dict(), './trained/secbert/binary_saved_weights.pt')
 
         # append training and validation loss
         train_losses.append(train_loss)
@@ -275,7 +276,12 @@ def train_binary(training_loader, validating_loader, optimizer):
         return train_losses, valid_losses
 
 
-def train_multi(training_loader, validating_loader, optimizer):
+def train_multi(multilabel_secBERT_encoder, training_loader, validating_loader, optimizer):
+    print('Train Multilabel Classification')
+    multilabel_secBERT_encoder.to(device)
+    for param in multilabel_secBERT_encoder.bert.encoder.layer[:3].parameters():
+        param.requires_grad_ = False
+
     loss_function = torch.nn.CrossEntropyLoss()
     # set initial loss to infinite
     best_valid_loss = float('inf')
@@ -285,16 +291,16 @@ def train_multi(training_loader, validating_loader, optimizer):
     valid_losses = []
 
     for epoch in range(EPOCHS):
-        print('\n Epoch {:} / {:}'.format(epoch + 1, EPOCHS))
-        train_loss, train_acc, train_f1 = train_steps(training_loader, multilabel_secroBERTa_encoder, loss_function,
+        print('\nEpoch ', (epoch + 1), '/', EPOCHS)
+        train_loss, train_acc, train_f1 = train_steps(training_loader, multilabel_secBERT_encoder, loss_function,
                                                       optimizer)
-        valid_loss, valid_acc, valid_f1 = evaluate_steps(validating_loader, multilabel_secroBERTa_encoder,
+        valid_loss, valid_acc, valid_f1 = evaluate_steps(validating_loader, multilabel_secBERT_encoder,
                                                          loss_function)
 
         # save the best model
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
-            torch.save(multilabel_secroBERTa_encoder.state_dict(), './trained/bert/multi_saved_weights.pt')
+            torch.save(multilabel_secBERT_encoder.state_dict(), './trained/secbert/multi_saved_weights.pt')
 
         # append training and validation loss
         train_losses.append(train_loss)
@@ -315,11 +321,11 @@ EPOCHS = 20
 LEARNING_RATE = 1e-05
 
 # load pretrained model
-secroBERTa_tokenizer = RobertaTokenizer.from_pretrained("jackaduma/SecRoBERTa",
-                                                        do_lower_case=True)
-multilabel_secroBERTa_encoder = RobertaForSequenceClassification.from_pretrained("jackaduma/SecRoBERTa",
-                                                                                 num_labels=num_class - 1)
-binary_secroBERTa_encoder = RobertaForSequenceClassification.from_pretrained("jackaduma/SecRoBERTa", num_labels=2)
+secBERT_tokenizer = BertTokenizerFast.from_pretrained("jackaduma/SecBERT",
+                                                      do_lower_case=True)
+multilabel_secBERT_encoder = BertForSequenceClassification.from_pretrained("jackaduma/SecBERT",
+                                                                           num_labels=num_class - 1)
+binary_secBERT_encoder = BertForSequenceClassification.from_pretrained("jackaduma/SecBERT", num_labels=2)
 
 # prepare data, train split data for training, validating, testing
 train, val, test = prepare_data(dataset)
@@ -329,13 +335,13 @@ X_val, y_binary_val, X_vul_val, y_vul_val = val
 X_test, y_binary_test, X_vul_test, y_vul_test, y_test = test
 
 # convert string to index data (create vocabulary, ...)
-binary_training_set = OpcodeData(X_train, y_binary_train, secroBERTa_tokenizer, max_length)
-binary_validating_set = OpcodeData(X_val, y_binary_val, secroBERTa_tokenizer, max_length)
-binary_testing_set = OpcodeData(X_test, y_binary_test, secroBERTa_tokenizer, max_length)
+binary_training_set = OpcodeData(X_train, y_binary_train, secBERT_tokenizer, max_length)
+binary_validating_set = OpcodeData(X_val, y_binary_val, secBERT_tokenizer, max_length)
+binary_testing_set = OpcodeData(X_test, y_binary_test, secBERT_tokenizer, max_length)
 
-vul_training_set = OpcodeData(X_vul_train, y_vul_train, secroBERTa_tokenizer, max_length)
-vul_validating_set = OpcodeData(X_vul_val, y_vul_val, secroBERTa_tokenizer, max_length)
-vul_testing_set = OpcodeData(X_vul_test, y_vul_test, secroBERTa_tokenizer, max_length)
+vul_training_set = OpcodeData(X_vul_train, y_vul_train, secBERT_tokenizer, max_length)
+vul_validating_set = OpcodeData(X_vul_val, y_vul_val, secBERT_tokenizer, max_length)
+vul_testing_set = OpcodeData(X_vul_test, y_vul_test, secBERT_tokenizer, max_length)
 
 # create data generator for train, validate, test
 train_params = {'batch_size': TRAIN_BATCH_SIZE,
@@ -363,32 +369,28 @@ vul_training_loader = DataLoader(vul_training_set, **train_params)
 vul_validating_loader = DataLoader(vul_validating_set, **val_params)
 vul_testing_loader = DataLoader(vul_testing_set, **test_params)
 
-# push data to device
-binary_secroBERTa_encoder.to(device)
-multilabel_secroBERTa_encoder.to(device)
-
 # Creating the loss function and optimizer
 loss_function = torch.nn.CrossEntropyLoss()
-binary_optimizer = torch.optim.Adam(params=binary_secroBERTa_encoder.parameters(), lr=LEARNING_RATE)
-vul_optimizer = torch.optim.Adam(params=binary_secroBERTa_encoder.parameters(), lr=LEARNING_RATE)
+binary_optimizer = torch.optim.Adam(params=binary_secBERT_encoder.parameters(), lr=LEARNING_RATE)
+vul_optimizer = torch.optim.Adam(params=binary_secBERT_encoder.parameters(), lr=LEARNING_RATE)
 
 # Train data
-train_binary(binary_training_loader, binary_validating_loader, binary_optimizer)
-train_multi(vul_training_loader, vul_validating_loader, vul_optimizer)
+# train_binary(binary_secBERT_encoder, binary_training_loader, binary_validating_loader, binary_optimizer)
+train_multi(multilabel_secBERT_encoder, vul_training_loader, vul_validating_loader, vul_optimizer)
 
-binary_secroBERTa_encoder.load_state_dict(torch.load('./trained/secrobert/binary_saved_weights.pt'))
-multilabel_secroBERTa_encoder.load_state_dict(torch.load('./trained/secrobert/multi_saved_weights.pt'))
+binary_secBERT_encoder.load_state_dict(torch.load('./trained/secbert/binary_saved_weights.pt'))
+multilabel_secBERT_encoder.load_state_dict(torch.load('./trained/secbert/multi_saved_weights.pt'))
 
-binary_pred = predict(binary_testing_loader, binary_secroBERTa_encoder, loss_function)
+binary_pred = predict(binary_testing_loader, binary_secBERT_encoder, loss_function)
 binary_pred = np.array(binary_pred, dtype=int)
 print(classification_report(y_binary_test.to_numpy().astype(int), binary_pred.astype(int)))
 df_pred = pd.DataFrame(binary_pred, columns=['LABELS'])
 y_vul_test = y_test.loc[df_pred['LABELS'] == 1].reset_index(drop=True)
 X_vul_test = X_test.loc[y_vul_test.index].reset_index(drop=True)
-vul_testing_set = OpcodeData(X_vul_test, y_vul_test, secroBERTa_tokenizer, max_length)
+vul_testing_set = OpcodeData(X_vul_test, y_vul_test, secBERT_tokenizer, max_length)
 vul_testing_loader = DataLoader(vul_testing_set, **test_params)
 
-vul_pred = predict(vul_testing_loader, multilabel_secroBERTa_encoder, loss_function)
+vul_pred = predict(vul_testing_loader, multilabel_secBERT_encoder, loss_function)
 
 df_pred[df_pred == 0] = 9
 result = df_pred.to_numpy()
