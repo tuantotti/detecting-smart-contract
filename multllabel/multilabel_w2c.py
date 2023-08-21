@@ -51,7 +51,7 @@ word2vec = Word2Vec(word_index)
 #### Train embedding
 """
 print('Train embedding')
-word2vec.train_vocab(X=X_train, embedding_dim=32)
+word2vec.train_vocab(X=X, embedding_dim=32)
 embedding_matrix = word2vec()
 
 print(embedding_matrix.shape)
@@ -76,7 +76,7 @@ lbl_powerset = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_test,
                                method='LabelPowerset', num_classes=num_classes)
 y_pred_lbp = lbl_powerset()
 
-save_classification(y_test=Y_test, y_pred=y_pred_lbp, out_dir='.././report/Label_Powerset_TFIDF.csv')
+save_classification(y_test=Y_test, y_pred=y_pred_lbp, out_dir='.././report/Label_Powerset_W2V.csv')
 
 """### Binary relevence"""
 print("Binary relevence")
@@ -84,7 +84,7 @@ print("Binary relevence")
 bin_relevence = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_test, 
                                method='BinaryRelevance', num_classes=num_classes)
 y_pred_binre = bin_relevence()
-save_classification(y_test=Y_test, y_pred=y_pred_binre, out_dir='.././report/Binary_Relevence_TFIDF.csv')
+save_classification(y_test=Y_test, y_pred=y_pred_binre, out_dir='.././report/Binary_Relevence_W2V.csv')
 
 """### Classifier Chains"""
 print("Classifier Chains")
@@ -92,11 +92,11 @@ classifier_chain = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_te
                                method='ClassifierChain', num_classes=num_classes)
 Y_pred_chains = classifier_chain()
 Y_pred_ensemble = Y_pred_chains.mean(axis=0)
-save_classification(y_test=Y_test, y_pred=Y_pred_ensemble.astype(int), out_dir='.././report/Classifier_Chains_TFIDF.csv')
+save_classification(y_test=Y_test, y_pred=Y_pred_ensemble.astype(int), out_dir='.././report/Classifier_Chains_W2V.csv')
 
 """### Adapted Algorithm"""
 print("Adapted Algorithm")
 adapt_al = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_test, 
                                method='MLkNN', num_classes=num_classes)
 y_pred_adapt = adapt_al()
-save_classification(y_test=Y_test, y_pred=y_pred_adapt.astype(int), out_dir='.././report/Adapted_Algorithm_TFIDF.csv')
+save_classification(y_test=Y_test, y_pred=y_pred_adapt.astype(int), out_dir='.././report/Adapted_Algorithm_W2V.csv')
