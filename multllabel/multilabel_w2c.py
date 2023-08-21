@@ -14,6 +14,9 @@ from feature_extraction_utils import Word2Vec
 from utils_method import nlp_preprocess
 from sklearn.preprocessing import MinMaxScaler
 
+from keras.preprocessing.text import Tokenizer
+from keras.utils import pad_sequences
+
 
 """
 Read and preprocess data
@@ -43,12 +46,28 @@ def save_classification(y_test,y_pred, out_dir):
 
   return out_df
 
+"""## Split data"""
+X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.2, random_state=2023)
+
+
 """## Feature Extraction
 ### Word2Vec
 """
 print("Feature Extraction - Word2Vec")
 max_length = 5500
-X_tokenized, word_index = nlp_preprocess(X.to_numpy(), max_length)
+tokenizer = Tokenizer(lower=False)
+
+# Create vocabulary
+tokenizer.fit_on_texts(X_train)
+
+# Transforms each text in texts to a sequence of integers
+sequences_train = tokenizer.texts_to_sequences(X_train)
+sequences_test = tokenizer.texts_to_sequences(X_test)
+
+# Pads sequences to the same length
+X_tokenized_train = pad_sequences(sequences_train, maxlen=max_length)
+X_tokenized_test = pad_sequences(sequences_test, maxlen=max_length)
+word_index = tokenizer.word_index
 vocab_size = len(word_index) + 1
 word2vec = Word2Vec(word_index)
 
@@ -61,16 +80,21 @@ embedding_matrix = word2vec()
 
 print(embedding_matrix.shape)
 
+# create mean for machine learning
 mean_embedding = embedding_matrix.mean(axis=1)
-X_mean_embedding = X_tokenized.copy().astype('float32')
-for i, x in enumerate(X_tokenized):
+X_mean_embedding_train = X_tokenized_train.copy().astype('float32')
+for i, x in enumerate(X_tokenized_train):
     for j, value in enumerate(x):
-        X_mean_embedding[i, j] = mean_embedding[value]
+        X_mean_embedding_train[i, j] = mean_embedding[value]
+
+X_mean_embedding_test = X_tokenized_train.copy().astype('float32')
+for i, x in enumerate(X_tokenized_train):
+    for j, value in enumerate(x):
+        X_mean_embedding_test[i, j] = mean_embedding[value]
 
 scaler = MinMaxScaler()
-X_mean_embedding = scaler.fit_transform(X_mean_embedding)
-"""## Split data"""
-X_train, X_test, Y_train, Y_test = train_test_split(X_mean_embedding, y, test_size=0.2, random_state=0)
+X_train = scaler.fit_transform(X_mean_embedding_train)
+X_test = scaler.fit_transform(X_mean_embedding_test)
 
 """# Multilabel machine learning
 ### Label Powerset
