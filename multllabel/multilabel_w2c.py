@@ -7,11 +7,10 @@ current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 
-from sklearn.metrics import classification_report
+from utils_method import save_classification
 from sklearn.model_selection import train_test_split
 from base_multilabel import MultilabelModel
 from feature_extraction_utils import Word2Vec
-from utils_method import nlp_preprocess
 from sklearn.preprocessing import MinMaxScaler
 
 from keras.preprocessing.text import Tokenizer
@@ -23,7 +22,7 @@ Read and preprocess data
 """
 print("Read and preprocess data")
 data_folder = os.getcwd() + '/data-multilabel/'
-data = pd.read_csv(data_folder + '/Data_Cleansing.csv')
+data = pd.read_csv(data_folder + 'Data_Cleansing.csv')
 data = data.drop(['Unnamed: 0', 'index', 'ADDRESS', 'LABEL_FORMAT'], axis=1)
 # remove_label = data['LABEL'].value_counts().keys().tolist()[6:]
 # remove_index = data[data['LABEL'].isin(remove_label)].index
@@ -37,14 +36,6 @@ labels = data.iloc[:, -num_classes:].keys().tolist()
 values = np.sum(y, axis=0)
 
 print(dict(zip(labels, values)))
-
-def save_classification(y_test,y_pred, out_dir):
-  print(classification_report(y_test,y_pred, target_names=labels))
-  out = classification_report(y_test,y_pred, output_dict=True, target_names=labels)
-  out_df = pd.DataFrame(out).transpose()
-  out_df.to_csv(out_dir)
-
-  return out_df
 
 """## Split data"""
 X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.2, random_state=2023)
@@ -105,7 +96,7 @@ lbl_powerset = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_test,
                                method='LabelPowerset', num_classes=num_classes)
 y_pred_lbp = lbl_powerset()
 
-save_classification(y_test=Y_test, y_pred=y_pred_lbp, out_dir='.././report/Label_Powerset_W2V.csv')
+save_classification(y_test=Y_test, y_pred=y_pred_lbp, out_dir='./Label_Powerset_W2V.csv')
 
 """### Binary relevence"""
 print("Binary relevence")
@@ -113,7 +104,7 @@ print("Binary relevence")
 bin_relevence = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_test, 
                                method='BinaryRelevance', num_classes=num_classes)
 y_pred_binre = bin_relevence()
-save_classification(y_test=Y_test, y_pred=y_pred_binre, out_dir='.././report/Binary_Relevence_W2V.csv')
+save_classification(y_test=Y_test, y_pred=y_pred_binre, out_dir='./Binary_Relevence_W2V.csv')
 
 """### Classifier Chains"""
 print("Classifier Chains")
@@ -121,11 +112,11 @@ classifier_chain = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_te
                                method='ClassifierChain', num_classes=num_classes)
 Y_pred_chains = classifier_chain()
 Y_pred_ensemble = Y_pred_chains.mean(axis=0)
-save_classification(y_test=Y_test, y_pred=Y_pred_ensemble.astype(int), out_dir='.././report/Classifier_Chains_W2V.csv')
+save_classification(y_test=Y_test, y_pred=Y_pred_ensemble.astype(int), out_dir='./Classifier_Chains_W2V.csv')
 
 """### Adapted Algorithm"""
 print("Adapted Algorithm")
 adapt_al = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_test, 
                                method='MLkNN', num_classes=num_classes)
 y_pred_adapt = adapt_al()
-save_classification(y_test=Y_test, y_pred=y_pred_adapt.astype(int), out_dir='.././report/Adapted_Algorithm_W2V.csv')
+save_classification(y_test=Y_test, y_pred=y_pred_adapt.astype(int), out_dir='./Adapted_Algorithm_W2V.csv')

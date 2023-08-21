@@ -1,4 +1,5 @@
 import os
+from sklearn.metrics import classification_report, accuracy_score
 
 import pandas as pd
 from keras.preprocessing.text import Tokenizer
@@ -43,3 +44,16 @@ def nlp_preprocess(X, max_length):
     _X = pad_sequences(sequences, maxlen=max_length)
 
     return _X, tokenizer.word_index
+
+
+def save_classification(y_test,y_pred, out_dir):
+  out = classification_report(y_test,y_pred, output_dict=True, target_names=labels)
+  total_support = out['samples avg']['support']
+  accuracy = accuracy_score(y_test, y_pred)
+  out['accuracy'] = {'precision': accuracy, 'recall': accuracy, 'f1-score': accuracy, 'support': total_support}
+  out_df = pd.DataFrame(out).transpose()
+  print(out_df)
+
+  out_df.to_csv(out_dir)
+
+  return out_df
