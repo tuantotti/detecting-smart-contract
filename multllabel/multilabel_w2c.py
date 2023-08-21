@@ -1,6 +1,11 @@
 import pandas as pd
 import os
+import sys
 import numpy as np
+
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+sys.path.append(parent)
 
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
