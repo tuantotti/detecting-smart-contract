@@ -96,7 +96,7 @@ lbl_powerset = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_test,
                                method='LabelPowerset', num_classes=num_classes)
 y_pred_lbp = lbl_powerset()
 
-save_classification(y_test=Y_test, y_pred=y_pred_lbp, out_dir='./Label_Powerset_W2V.csv')
+save_classification(y_test=Y_test, y_pred=y_pred_lbp, out_dir='./report/Label_Powerset_W2V.csv', labels=labels)
 
 """### Binary relevence"""
 print("Binary relevence")
@@ -104,7 +104,7 @@ print("Binary relevence")
 bin_relevence = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_test, 
                                method='BinaryRelevance', num_classes=num_classes)
 y_pred_binre = bin_relevence()
-save_classification(y_test=Y_test, y_pred=y_pred_binre, out_dir='./Binary_Relevence_W2V.csv')
+save_classification(y_test=Y_test, y_pred=y_pred_binre, out_dir='./report/Binary_Relevence_W2V.csv', labels=labels)
 
 """### Classifier Chains"""
 print("Classifier Chains")
@@ -112,11 +112,11 @@ classifier_chain = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_te
                                method='ClassifierChain', num_classes=num_classes)
 Y_pred_chains = classifier_chain()
 Y_pred_ensemble = Y_pred_chains.mean(axis=0)
-save_classification(y_test=Y_test, y_pred=Y_pred_ensemble.astype(int), out_dir='./Classifier_Chains_W2V.csv')
+save_classification(y_test=Y_test, y_pred=Y_pred_ensemble.astype(int), out_dir='./report/Classifier_Chains_W2V.csv', labels=labels)
 
 """### Adapted Algorithm"""
 print("Adapted Algorithm")
 adapt_al = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_test, 
                                method='MLkNN', num_classes=num_classes)
 y_pred_adapt = adapt_al()
-save_classification(y_test=Y_test, y_pred=y_pred_adapt.astype(int), out_dir='./Adapted_Algorithm_W2V.csv')
+save_classification(y_test=Y_test, y_pred=y_pred_adapt.astype(int), out_dir='./report/Adapted_Algorithm_W2V.csv', labels=labels)

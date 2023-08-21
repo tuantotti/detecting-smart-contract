@@ -46,7 +46,7 @@ def nlp_preprocess(X, max_length):
     return _X, tokenizer.word_index
 
 
-def save_classification(y_test,y_pred, out_dir):
+def save_classification(y_test,y_pred, out_dir, labels):
   out = classification_report(y_test,y_pred, output_dict=True, target_names=labels)
   total_support = out['samples avg']['support']
   accuracy = accuracy_score(y_test, y_pred)
