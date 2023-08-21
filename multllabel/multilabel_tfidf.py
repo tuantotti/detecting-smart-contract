@@ -16,17 +16,23 @@ from sklearn.multiclass import OneVsRestClassifier
 """
 Read and preprocess data
 """
+print("Read and preprocess data")
 data_folder = os.getcwd() + '/data-multilabel/'
-data = pd.read_csv(data_folder + '/.././report/Data_Cleansing.csv')
+data = pd.read_csv(data_folder + '/Data_Cleansing.csv')
 data = data.drop(['Unnamed: 0', 'index', 'ADDRESS', 'LABEL_FORMAT'], axis=1)
-remove_label = data['LABEL'].value_counts().keys().tolist()[6:]
-remove_index = data[data['LABEL'].isin(remove_label)].index
-data.drop(remove_index, inplace=True)
-X, y = data['BYTECODE'], data.iloc[:, 2:].to_numpy()
+# remove_label = data['LABEL'].value_counts().keys().tolist()[6:]
+# remove_index = data[data['LABEL'].isin(remove_label)].index
+# data.drop(remove_index, inplace=True)
+X, y = data['BYTECODE'], data.iloc[:, -9:].to_numpy()
+print('y: ', y.shape)
+labels = data.iloc[:, -9:].keys().tolist()
+values = np.sum(labels, axis=0)
+
+print(dict(zip(labels, values)))
 
 def save_classification(y_test,y_pred, out_dir):
-  print(classification_report(y_test,y_pred))
-  out = classification_report(y_test,y_pred, output_dict=True)
+  print(classification_report(y_test,y_pred, target_names=labels))
+  out = classification_report(y_test,y_pred, output_dict=True, target_names=labels)
   out_df = pd.DataFrame(out).transpose()
   out_df.to_csv(out_dir)
 
@@ -35,6 +41,7 @@ def save_classification(y_test,y_pred, out_dir):
 """## Feature Extraction
 ### TF IDF
 """
+print("Feature Extraction - TFIDF")
 class TfIdf:
     def __init__(self, X_train, X_test):
         self.X_train = X_train
@@ -57,6 +64,8 @@ X_train, X_test = tfidf()
 """# Multilabel machine learning
 ### Label Powerset
 """
+print("Multilabel machine learning")
+print("Label Powerset")
 classifier = LabelPowerset(LogisticRegression())
 classifier.fit(X_train, Y_train)
 y_pred_lbp = classifier.predict(X_test)
@@ -64,6 +73,7 @@ y_pred_lbp = classifier.predict(X_test)
 save_classification(y_test=Y_test, y_pred=y_pred_lbp, out_dir='.././report/Label_Powerset_TFIDF.csv')
 
 """### Binary relevence"""
+print("Binary relevence")
 # with a gaussian naive bayes base classifier
 classifier = BinaryRelevance(GaussianNB())
 classifier.fit(X_train, Y_train)
@@ -71,6 +81,7 @@ y_pred_binre = classifier.predict(X_test)
 save_classification(y_test=Y_test, y_pred=y_pred_binre, out_dir='.././report/Binary_Relevence_TFIDF.csv')
 
 """### Classifier Chains"""
+print("Classifier Chains")
 base_lr = LogisticRegression()
 
 chains = [ClassifierChain(base_lr, order="random", random_state=i) for i in range(9)]
@@ -88,6 +99,7 @@ ensemble_jaccard_score = jaccard_score(Y_test, Y_pred_ensemble >= 0.5, average="
 save_classification(y_test=Y_test, y_pred=Y_pred_ensemble, out_dir='.././report/Classifier_Chains_TFIDF.csv')
 
 """### Adapted Algorithm"""
+print("Adapted Algorithm")
 classifier = MLkNN(k=8)
 classifier.fit(X_train, Y_train)
 y_pred = classifier.predict(X_test)
