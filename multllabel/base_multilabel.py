@@ -28,7 +28,7 @@ class MultilabelModel:
         elif self.method == 'ClassifierChain':
             base_lr = LogisticRegression()
 
-            chains = [ClassifierChain(base_lr, order="random", random_state=i) for i in range(num_classes)]
+            chains = [ClassifierChain(base_lr, order="random", random_state=i) for i in range(self.num_classes)]
             for chain in chains:
                 chain.fit(self.X_train, self.y_train)
 

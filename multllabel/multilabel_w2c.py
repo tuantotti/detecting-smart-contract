@@ -5,8 +5,8 @@ import numpy as np
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from base_multilabel import MultilabelModel
-from ..feature_extraction_utils import Word2Vec
-from ..utils_method import nlp_preprocess
+from feature_extraction_utils import Word2Vec
+from utils_method import nlp_preprocess
 from sklearn.preprocessing import MinMaxScaler
 
 

@@ -4,10 +4,8 @@ import numpy as np
 
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
 from base_multilabel import MultilabelModel
-from ..feature_extraction_utils import BagOfWord
-
+from feature_extraction_utils import BagOfWord
 """
 Read and preprocess data
 """
@@ -51,7 +49,7 @@ X_train_bow, X_test_bow = bow()
 """
 print("Multilabel machine learning")
 print("Label Powerset")
-lbl_powerset = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_test, 
+lbl_powerset = MultilabelModel(X_train=X_train_bow, y_train=Y_train, X_test=X_test_bow, 
                                method='LabelPowerset', num_classes=num_classes)
 y_pred_lbp = lbl_powerset()
 
@@ -60,14 +58,14 @@ save_classification(y_test=Y_test, y_pred=y_pred_lbp, out_dir='.././report/Label
 """### Binary relevence"""
 print("Binary relevence")
 # with a gaussian naive bayes base classifier
-bin_relevence = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_test, 
+bin_relevence = MultilabelModel(X_train=X_train_bow, y_train=Y_train, X_test=X_test_bow, 
                                method='BinaryRelevance', num_classes=num_classes)
 y_pred_binre = bin_relevence()
 save_classification(y_test=Y_test, y_pred=y_pred_binre, out_dir='.././report/Binary_Relevence_BOW.csv')
 
 """### Classifier Chains"""
 print("Classifier Chains")
-classifier_chain = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_test, 
+classifier_chain = MultilabelModel(X_train=X_train_bow, y_train=Y_train, X_test=X_test_bow, 
                                method='ClassifierChain', num_classes=num_classes)
 Y_pred_chains = classifier_chain()
 Y_pred_ensemble = Y_pred_chains.mean(axis=0)
@@ -75,7 +73,7 @@ save_classification(y_test=Y_test, y_pred=Y_pred_ensemble.astype(int), out_dir='
 
 """### Adapted Algorithm"""
 print("Adapted Algorithm")
-adapt_al = MultilabelModel(X_train=X_train, y_train=Y_train, X_test=X_test, 
+adapt_al = MultilabelModel(X_train=X_train_bow, y_train=Y_train, X_test=X_test_bow, 
                                method='MLkNN', num_classes=num_classes)
 y_pred_adapt = adapt_al()
 save_classification(y_test=Y_test, y_pred=y_pred_adapt.astype(int), out_dir='.././report/Adapted_Algorithm_BOW.csv')

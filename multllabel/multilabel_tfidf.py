@@ -6,7 +6,7 @@ from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from base_multilabel import MultilabelModel
-from ..feature_extraction_utils import TfIdf
+from feature_extraction_utils import TfIdf
 
 """
 Read and preprocess data
