@@ -4,10 +4,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
 from ann import ANN
-from feature_extraction_utils import Word2Vec
 from lstm_mi import LstmMiModel
 from machine_learning import MachineLearningModel
-from utils_method import read_data, nlp_preprocess
+from utils.feature_extraction_utils import Word2Vec
+from utils.utils_method import read_data, nlp_preprocess
 
 
 def run(is_scaler=True):

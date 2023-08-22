@@ -2,9 +2,9 @@ import os
 
 from sklearn.model_selection import train_test_split
 
-from feature_extraction_utils import BagOfWord
 from lstm_mi import LstmMiModel
-from utils_method import read_data
+from utils.feature_extraction_utils import BagOfWord
+from utils.utils_method import read_data
 
 
 def run():

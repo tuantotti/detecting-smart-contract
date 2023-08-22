@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
 from transformers import BertTokenizerFast, BertForSequenceClassification
 
-from utils_method import read_data
+from utils.utils_method import read_data
 
 if torch.cuda.is_available():
     dev = "cuda:0"
