@@ -75,8 +75,8 @@ for i, x in enumerate(X_tokenized_train):
     for j, value in enumerate(x):
         X_mean_embedding_train[i, j] = mean_embedding[value]
 
-X_mean_embedding_test = X_tokenized_train.copy().astype('float32')
-for i, x in enumerate(X_tokenized_train):
+X_mean_embedding_test = X_tokenized_test.copy().astype('float32')
+for i, x in enumerate(X_tokenized_test):
     for j, value in enumerate(x):
         X_mean_embedding_test[i, j] = mean_embedding[value]
 

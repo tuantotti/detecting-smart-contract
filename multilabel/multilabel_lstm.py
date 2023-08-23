@@ -11,9 +11,8 @@ sys.path.append(parent)
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
-from sklearn.metrics import f1_score, accuracy_score
-from utils.utils_method import save_classification
-from utils.feature_extraction_utils import TfIdf
+from sklearn.metrics import f1_score, accuracy_score, classification_report
+from utils.feature_extraction_utils import TfIdf, BagOfWord
 from sklearn.model_selection import train_test_split
 
 import matplotlib.pyplot as plt
@@ -202,95 +201,117 @@ def predict(testing_loader, model):
 
     return total_preds, total_labels
 
+"""
+classification report
+"""
+def save_classification(y_test,y_pred, out_dir, labels):
+  out = classification_report(y_test,y_pred, output_dict=True, target_names=labels)
+  total_support = out['samples avg']['support']
+  accuracy = accuracy_score(y_test, y_pred)
+  out['accuracy'] = {'precision': accuracy, 'recall': accuracy, 'f1-score': accuracy, 'support': total_support}
+  out_df = pd.DataFrame(out).transpose()
+  print(out_df)
+
+  out_df.to_csv(out_dir)
+
+  return out_df
+
+def run(feature_extraction_method='tfidf'):
+  """
+  Define constant
+  """
+  epochs = 10
+  num_classes = 4
+  NUM_HIDDEN_NODES = 128
+  NUM_OUTPUT_NODES = num_classes
+  NUM_LAYERS = 2
+  BIDIRECTION = False
+  DROPOUT = 0.2
+  BATCH_SIZE = 128
+
+  """
+  Read and preprocess data
+  """
+  print("Read and preprocess data")
+  data_folder = os.getcwd() + '/data-multilabel/'
+  data = pd.read_csv(data_folder + '/Data_Cleansing.csv')
+  data = data.drop(['Unnamed: 0', 'index', 'ADDRESS', 'LABEL_FORMAT'], axis=1)
+  num_classes = 4
+  selected_columns = ['BYTECODE', 'Timestamp dependence', 'Outdated Solidity version', 'Frozen Ether', 'Delegatecall Injection']
+  data = data.loc[:, selected_columns]
+  X, y = data['BYTECODE'], data.iloc[:, -num_classes:].to_numpy()
+  print('y: ', y.shape)
+  labels = data.iloc[:, -num_classes:].keys().tolist()
+  values = np.sum(y, axis=0)
+
+  print(dict(zip(labels, values)))
+
+  """## Split data"""
+  X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+  """
+  Feature Extraction
+  """
+  if feature_extraction_method == 'tfidf':
+    print("Feature Extraction - TFIDF")
+    tfidf = TfIdf(X_train, X_test)
+    X_train, X_test = tfidf()
+  elif feature_extraction_method == 'bow':
+    print("Feature Extraction - Bag Of Word")
+    bow = BagOfWord(X_train=X_train, X_test=X_test)
+    X_train, X_test = bow()
+
+  X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1, random_state=2023)
+  
+  SIZE_OF_VOCAB = X_train.shape[1]
+
+  """
+  Prepare data
+  """
+  X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1, random_state=2023)
+
+  tensor_X_train = torch.Tensor(X_train)
+  tensor_X_val = torch.Tensor(X_val)
+  tensor_X_test = torch.Tensor(X_test)
+  tensor_Y_train = torch.Tensor(Y_train)
+  tensor_Y_val = torch.Tensor(Y_val)
+  tensor_Y_test = torch.Tensor(Y_test)
+
+  train_dataset = TensorDataset(tensor_X_train, tensor_Y_train)
+  val_dataset = TensorDataset(tensor_X_val, tensor_Y_val)
+  test_dataset = TensorDataset(tensor_X_test, tensor_Y_test)
+
+  data_train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE)
+  data_val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
+  data_test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
+
+  """
+  Create model
+  """
+  model = LSTMMultilabel(SIZE_OF_VOCAB, NUM_HIDDEN_NODES, NUM_OUTPUT_NODES, NUM_LAYERS, BIDIRECTION, DROPOUT)
+  optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+  criterion = nn.BCELoss()
+  """
+  Train model
+  """
+  train_accuracies, valid_accuracies, train_losses, valid_losses = train(epochs, model, optimizer, criterion, (data_train_loader, data_val_loader))
+
+  """
+  Plot the result of training process
+  """
+  plot_graph(epochs, train_losses, valid_losses, "Train/Validation Loss")
+  plot_graph(epochs, train_accuracies, valid_accuracies, "Train/Validation Accuracy")
+
+  """
+  Evaluate model on test set and save the result
+  """
+  y_preds, total_test = predict(data_test_loader, model)
+  save_classification(y_test=total_test, y_pred=y_preds, labels=labels, out_dir='.././report/LSTM_'+feature_extraction_method+'.csv')
 
 """
 Run 
 """
 if __name__ == '__main__':
-    """
-    Define constant
-    """
-    epochs = 10
-    num_classes = 4
-    NUM_HIDDEN_NODES = 128
-    NUM_OUTPUT_NODES = num_classes
-    NUM_LAYERS = 2
-    BIDIRECTION = False
-    DROPOUT = 0.2
-    BATCH_SIZE = 128
-
-    """
-    Read and preprocess data
-    """
-    print("Read and preprocess data")
-    data_folder = os.getcwd() + '/data-multilabel/'
-    data = pd.read_csv(data_folder + '/Data_Cleansing.csv')
-    data = data.drop(['Unnamed: 0', 'index', 'ADDRESS', 'LABEL_FORMAT'], axis=1)
-    num_classes = 4
-    selected_columns = ['BYTECODE', 'Timestamp dependence', 'Outdated Solidity version', 'Frozen Ether', 'Delegatecall Injection']
-    data = data.loc[:, selected_columns]
-    X, y = data['BYTECODE'], data.iloc[:, -num_classes:].to_numpy()
-    print('y: ', y.shape)
-    labels = data.iloc[:, -num_classes:].keys().tolist()
-    values = np.sum(y, axis=0)
-
-    print(dict(zip(labels, values)))
-
-    """## Split data"""
-    X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.2, random_state=0)
-
-    """
-    Feature Extraction
-    """
-    print("Feature Extraction - TFIDF")
-    tfidf = TfIdf(X_train, X_test)
-    X_train, X_test = tfidf()
-    X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1, random_state=2023)
-    
-    SIZE_OF_VOCAB = X_train.shape[1]
-
-
-    """
-    Prepare data
-    """
-    X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1, random_state=2023)
-
-    tensor_X_train = torch.Tensor(X_train)
-    tensor_X_val = torch.Tensor(X_val)
-    tensor_X_test = torch.Tensor(X_test)
-    tensor_Y_train = torch.Tensor(Y_train)
-    tensor_Y_val = torch.Tensor(Y_val)
-    tensor_Y_test = torch.Tensor(Y_test)
-
-    train_dataset = TensorDataset(tensor_X_train, tensor_Y_train)
-    val_dataset = TensorDataset(tensor_X_val, tensor_Y_val)
-    test_dataset = TensorDataset(tensor_X_test, tensor_Y_test)
-
-    data_train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE)
-    data_val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
-    data_test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
-
-    """
-    Create model
-    """
-    model = LSTMMultilabel(SIZE_OF_VOCAB, NUM_HIDDEN_NODES,
-                      NUM_OUTPUT_NODES, NUM_LAYERS, BIDIRECTION, DROPOUT)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    criterion = nn.BCELoss()
-    """
-    Train model
-    """
-    train_accuracies, valid_accuracies, train_losses, valid_losses = train(epochs, model, optimizer, criterion)
-
-    """
-    Plot the result of training process
-    """
-    plot_graph(epochs, train_losses, valid_losses, "Train/Validation Loss")
-    plot_graph(epochs, train_accuracies, valid_accuracies, "Train/Validation Accuracy")
-
-    """
-    Evaluate model on test set and save the result
-    """
-    y_preds, total_test = predict(data_test_loader, model, criterion)
-    save_classification(y_test=total_test, y_pred=y_preds, labels=labels, out_dir='.././report/LSTM_TFIDF.csv')
+  run(feature_extraction_method='tfidf')  
+  run(feature_extraction_method='bow')  
 
