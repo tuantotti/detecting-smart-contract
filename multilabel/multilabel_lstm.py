@@ -252,18 +252,24 @@ def run(feature_extraction_method='tfidf'):
   """
   Feature Extraction
   """
-  if feature_extraction_method == 'tfidf':
+  if feature_extraction_method == 'TFIDF':
     print("Feature Extraction - TFIDF")
     tfidf = TfIdf(X_train, X_test)
     X_train, X_test = tfidf()
-  elif feature_extraction_method == 'bow':
+    SIZE_OF_VOCAB = X_train.shape[1]
+
+  elif feature_extraction_method == 'BOW':
     print("Feature Extraction - Bag Of Word")
     bow = BagOfWord(X_train=X_train, X_test=X_test)
     X_train, X_test = bow()
+    SIZE_OF_VOCAB  = X_train.shape[1]
+  
+  elif feature_extraction_method == 'W2V':
+    print("Feature Extraction - W2V")
+     
+    
 
   X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1, random_state=2023)
-  
-  SIZE_OF_VOCAB = X_train.shape[1]
 
   """
   Prepare data
@@ -312,6 +318,6 @@ def run(feature_extraction_method='tfidf'):
 Run 
 """
 if __name__ == '__main__':
-  run(feature_extraction_method='tfidf')  
-  run(feature_extraction_method='bow')  
+  run(feature_extraction_method='TFIDF')  
+  run(feature_extraction_method='BOW')  
 
