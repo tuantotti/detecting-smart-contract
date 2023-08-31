@@ -9,7 +9,7 @@ sys.path.append(parent)
 
 from sklearn.model_selection import train_test_split
 from base_multilabel import MultilabelModel
-from utils.utils_method import save_classification
+from save_report import save_classification
 from utils.feature_extraction_utils import Word2Vec
 from sklearn.preprocessing import MinMaxScaler
 

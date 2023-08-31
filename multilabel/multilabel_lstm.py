@@ -11,9 +11,10 @@ sys.path.append(parent)
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
-from sklearn.metrics import f1_score, accuracy_score, classification_report
+from sklearn.metrics import f1_score, accuracy_score
 from utils.feature_extraction_utils import TfIdf, BagOfWord
 from sklearn.model_selection import train_test_split
+from save_report import save_classification
 
 import matplotlib.pyplot as plt
 
@@ -201,20 +202,6 @@ def predict(testing_loader, model):
 
     return total_preds, total_labels
 
-"""
-classification report
-"""
-def save_classification(y_test,y_pred, out_dir, labels):
-  out = classification_report(y_test,y_pred, output_dict=True, target_names=labels)
-  total_support = out['samples avg']['support']
-  accuracy = accuracy_score(y_test, y_pred)
-  out['accuracy'] = {'precision': accuracy, 'recall': accuracy, 'f1-score': accuracy, 'support': total_support}
-  out_df = pd.DataFrame(out).transpose()
-  print(out_df)
-
-  out_df.to_csv(out_dir)
-
-  return out_df
 
 def run(feature_extraction_method='tfidf'):
   """

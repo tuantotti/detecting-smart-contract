@@ -7,10 +7,10 @@ current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 
-from utils.utils_method import save_classification
 from sklearn.model_selection import train_test_split
 from base_multilabel import MultilabelModel
 from feature_extraction_utils import TfIdf
+from save_report import save_classification
 
 """
 Read and preprocess data
