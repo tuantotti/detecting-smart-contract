@@ -163,6 +163,9 @@ def train(epochs, model, optimizer, criterion, dataloader):
   train_accuracies = []
   valid_accuracies = []
 
+  if os.path.isdir('./trained'):
+     os.mkdir('./trained')
+
   for epoch in range(epochs):
     start_time = time.time()
     train_loss, train_acc, _ = train_steps(data_train_loader, model, criterion, optimizer)
@@ -172,7 +175,7 @@ def train(epochs, model, optimizer, criterion, dataloader):
     # save the best model
     if valid_loss < best_valid_loss:
         best_valid_loss = valid_loss
-        torch.save(model.state_dict(), 'multilabel-lstm.pt')
+        torch.save(model.state_dict(), './trained/multilabel-lstm.pt')
     # append training and validation loss
     train_losses.append(train_loss)
     valid_losses.append(valid_loss)
@@ -283,18 +286,14 @@ def run(feature_extraction_method='tfidf'):
     sequences_test = tokenizer.texts_to_sequences(X_test)
 
     # Pads sequences to the same length
-    X_train = pad_sequences(sequences_train, maxlen=max_length)
-    X_test = pad_sequences(sequences_test, maxlen=max_length)
     word_index = tokenizer.word_index
     SIZE_OF_VOCAB = len(word_index) + 1
     word2vec = Word2Vec(word_index)
-
-    """
-    #### Train embedding
-    """
-    print('Train embedding')
-    word2vec.train_vocab(X=X_train, embedding_dim=16)
+    word2vec.train_vocab(X=X_train, embedding_dim=32)
     embedding_matrix = word2vec()
+
+    X_train = pad_sequences(sequences_train, maxlen=max_length)
+    X_test = pad_sequences(sequences_test, maxlen=max_length)
 
   X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.2, random_state=2023)
 
@@ -303,12 +302,12 @@ def run(feature_extraction_method='tfidf'):
   """
   X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1, random_state=2023)
 
-  tensor_X_train = torch.Tensor(X_train)
-  tensor_X_val = torch.Tensor(X_val)
-  tensor_X_test = torch.Tensor(X_test)
-  tensor_Y_train = torch.Tensor(Y_train)
-  tensor_Y_val = torch.Tensor(Y_val)
-  tensor_Y_test = torch.Tensor(Y_test)
+  tensor_X_train = torch.tensor(X_train)
+  tensor_X_val = torch.tensor(X_val)
+  tensor_X_test = torch.tensor(X_test)
+  tensor_Y_train = torch.FloatTensor(Y_train)
+  tensor_Y_val = torch.FloatTensor(Y_val)
+  tensor_Y_test = torch.FloatTensor(Y_test)
 
   train_dataset = TensorDataset(tensor_X_train, tensor_Y_train)
   val_dataset = TensorDataset(tensor_X_val, tensor_Y_val)
@@ -344,14 +343,14 @@ def run(feature_extraction_method='tfidf'):
   Evaluate model on test set and save the result
   """
   y_preds, total_test = predict(data_test_loader, model)
-  save_classification(y_test=total_test, y_pred=y_preds, labels=labels, out_dir='.././report/LSTM_'+feature_extraction_method+'.csv')
+  save_classification(y_test=np.array(total_test), y_pred=np.array(y_preds), labels=labels, out_dir='./report/LSTM_'+feature_extraction_method+'.csv')
 
 """
 Run 
 """
 if __name__ == '__main__':
-  run(feature_extraction_method='TFIDF')  
-  run(feature_extraction_method='BOW')  
+  # run(feature_extraction_method='TFIDF')  
+  # run(feature_extraction_method='BOW')  
   run(feature_extraction_method='W2V')  
 
 

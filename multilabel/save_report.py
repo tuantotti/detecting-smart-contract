@@ -1,8 +1,12 @@
 import numpy as np
 import pandas as pd
 from sklearn.metrics import *
+import os
 
 def save_classification(y_test, y_pred, out_dir, labels):
+  if os.path.isdir('./report'):
+    os.mkdir('./report')
+    
   def accuracy(y_test, y_pred):
     numerator = np.sum(y_test & y_pred, axis=1)
     denominator = np.sum(y_test | y_pred, axis=1)

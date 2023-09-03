@@ -214,6 +214,9 @@ def train(epochs, model, optimizer, criterion, dataloader):
   train_accuracies = []
   valid_accuracies = []
 
+  if os.path.isdir('./trained'):
+    os.mkdir('./trained')
+
   for epoch in range(epochs):
     print('Epoch {}/{} \t'.format(epoch + 1, epochs))
     start_time = time.time()
@@ -224,7 +227,7 @@ def train(epochs, model, optimizer, criterion, dataloader):
     # save the best model
     if valid_loss < best_valid_loss:
         best_valid_loss = valid_loss
-        # torch.save(model.state_dict(), 'multilabel-lstm.pt')
+        torch.save(model.state_dict(), 'secbert-multilabel.pt')
     # append training and validation loss
     train_losses.append(train_loss)
     valid_losses.append(valid_loss)

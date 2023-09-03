@@ -9,7 +9,7 @@ sys.path.append(parent)
 
 from sklearn.model_selection import train_test_split
 from base_multilabel import MultilabelModel
-from feature_extraction_utils import TfIdf
+from utils.feature_extraction_utils import TfIdf
 from save_report import save_classification
 
 """
