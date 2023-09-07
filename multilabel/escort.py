@@ -343,7 +343,7 @@ def predict(testing_loader, model):
 
 def run():
     data_folder = os.getcwd() + '/data-multilabel/'
-    data = pd.read_csv(data_folder + '/Data_Cleansing_a.csv')
+    data = pd.read_csv(data_folder + 'Data_Cleansing.csv')
     selected_columns = ['BYTECODE', 'Timestamp dependence', 'Outdated Solidity version', 'Frozen Ether', 'Delegatecall Injection']
     data = data.loc[:, selected_columns]
     labels = data.iloc[:, -4:].keys().tolist()
@@ -403,7 +403,7 @@ def run():
     total_preds, total_labels, execution_time = predict(data_test_loader, model, criterion)
 
     print('Execution time: ', execution_time)
-    save_classification(y_pred=np.array(total_preds), y_test=np.array(total_labels), labels=labels, out_dir='escort.csv')
+    save_classification(y_pred=np.array(total_preds), y_test=np.array(total_labels), labels=labels, out_dir='./report/escort.csv')
 
 if __name__ == '__main__':
    run()
