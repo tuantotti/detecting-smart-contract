@@ -202,7 +202,7 @@ def predict(testing_loader, model):
             total_preds += list(preds)
             total_labels += b_labels.tolist()
 
-    return total_preds
+    return total_preds, total_labels
 
 
 def train(epochs, model, optimizer, criterion, dataloader):
@@ -318,7 +318,7 @@ def run(k=1):
     Evaluate model on test set and save the result
     """
     y_preds, total_test = predict(testing_loader, secBertClassifierMultilabel)
-    save_classification(y_test=total_test, y_pred=y_preds, labels=labels, out_dir='secbert-multilabel-freeze-'+k+'-layer.csv')
+    save_classification(y_test=np.array(total_test), y_pred=np.array(y_preds), labels=labels, out_dir='secbert-multilabel-freeze-'+k+'-layer.csv')
 if __name__ == '__main__':
     run(k=5)
     run(k=4)
