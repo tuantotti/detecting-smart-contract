@@ -206,8 +206,9 @@ def predict(testing_loader, model):
     # empty list to save the model predictions
     total_preds = []
     total_labels = []
+    start_time = time.time()
     # iterate over batches
-    for _, batch in enumerate(testing_loader):
+    for step, batch in enumerate(testing_loader):
         # push the batch to gpu
         inputs = batch[0].to(device)
         labels = batch[1].to(device)
@@ -222,7 +223,8 @@ def predict(testing_loader, model):
             total_preds += list(preds)
             total_labels += labels.tolist()
 
-    return total_preds, total_labels
+    execution_time = (time.time() - start_time) / len(total_labels)
+    return total_preds, total_labels, execution_time
 
 
 def run(feature_extraction_method='tfidf'):
@@ -342,15 +344,16 @@ def run(feature_extraction_method='tfidf'):
   """
   Evaluate model on test set and save the result
   """
-  y_preds, total_test = predict(data_test_loader, model)
-  save_classification(y_test=np.array(total_test), y_pred=np.array(y_preds), labels=labels, out_dir='./report/LSTM_'+feature_extraction_method+'.csv')
+  total_preds, total_labels, execution_time = predict(data_test_loader, model)
+  print('Execution time: ', execution_time)
+  save_classification(y_test=np.array(total_labels), y_pred=np.array(total_preds), labels=labels, out_dir='./report/LSTM_'+feature_extraction_method+'.csv')
 
 """
 Run 
 """
 if __name__ == '__main__':
-  # run(feature_extraction_method='TFIDF')  
-  # run(feature_extraction_method='BOW')  
+  run(feature_extraction_method='TFIDF')  
+  run(feature_extraction_method='BOW')  
   run(feature_extraction_method='W2V')  
 
 

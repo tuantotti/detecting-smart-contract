@@ -400,7 +400,7 @@ def run():
     plot_graph(EPOCHS, train_losses, valid_losses, "Train/Validation Loss")
     plot_graph(EPOCHS, train_accuracies, valid_accuracies, "Train/Validation Accuracy")
 
-    total_preds, total_labels, execution_time = predict(data_test_loader, model, criterion)
+    total_preds, total_labels, execution_time = predict(data_test_loader, model)
 
     print('Execution time: ', execution_time)
     save_classification(y_pred=np.array(total_preds), y_test=np.array(total_labels), labels=labels, out_dir='./report/escort.csv')
