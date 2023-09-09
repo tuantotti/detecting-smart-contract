@@ -4,7 +4,7 @@ from sklearn.metrics import *
 import os
 
 def save_classification(y_test, y_pred, out_dir, labels):
-  if os.path.isdir('./report'):
+  if os.path.isdir('./report') == False:
     os.mkdir('./report')
   if isinstance(y_pred, np.ndarray) == False:
     y_pred = y_pred.toarray()
