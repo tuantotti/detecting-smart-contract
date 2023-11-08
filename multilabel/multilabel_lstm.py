@@ -14,6 +14,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from sklearn.metrics import f1_score, accuracy_score, classification_report
 from utils.feature_extraction_utils import TfIdf, BagOfWord
 from sklearn.model_selection import train_test_split
+from mytokenizer import Tokenizer, pad_sequences
 
 import matplotlib.pyplot as plt
 
@@ -130,10 +131,10 @@ def evaluate_steps(validating_loader, model, loss_f):
 
     return avg_loss, acc_score, F1_score
 
-"""
-Training loop
-"""
 def train(epochs, model, optimizer, criterion, dataloader):
+  """
+  Training loop
+  """
   data_train_loader, data_val_loader = dataloader
   # empty lists to store training and validation loss of each epoch
   # set initial loss to infinite
@@ -173,38 +174,38 @@ def plot_graph(epochs, train, valid, tittle):
     plt.ylabel('loss', fontsize=12)
     plt.legend(loc='best')
 
-"""
-Predict 
-"""
 def predict(testing_loader, model):
-    # deactivate dropout layers
-    model.eval()
+  """
+  Predict 
+  """
+  # deactivate dropout layers
+  model.eval()
 
-    # empty list to save the model predictions
-    total_preds = []
-    total_labels = []
-    # iterate over batches
-    for _, batch in enumerate(testing_loader):
-        # push the batch to gpu
-        inputs = batch[0].to(device)
-        labels = batch[1].to(device)
+  # empty list to save the model predictions
+  total_preds = []
+  total_labels = []
+  # iterate over batches
+  for _, batch in enumerate(testing_loader):
+      # push the batch to gpu
+      inputs = batch[0].to(device)
+      labels = batch[1].to(device)
 
-        # deactivate autograd
-        with torch.no_grad():
-            # model predictions
-            preds = model(inputs)
+      # deactivate autograd
+      with torch.no_grad():
+          # model predictions
+          preds = model(inputs)
 
-            preds = preds.detach().cpu().numpy()
-            preds = np.where(preds>=0.5, 1, 0)
-            total_preds += list(preds)
-            total_labels += labels.tolist()
+          preds = preds.detach().cpu().numpy()
+          preds = np.where(preds>=0.5, 1, 0)
+          total_preds += list(preds)
+          total_labels += labels.tolist()
 
-    return total_preds, total_labels
+  return total_preds, total_labels
 
-"""
-classification report
-"""
 def save_classification(y_test,y_pred, out_dir, labels):
+  """
+  classification report
+  """
   out = classification_report(y_test,y_pred, output_dict=True, target_names=labels)
   total_support = out['samples avg']['support']
   accuracy = accuracy_score(y_test, y_pred)
