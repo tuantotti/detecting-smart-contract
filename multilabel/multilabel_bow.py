@@ -10,7 +10,7 @@ sys.path.append(parent)
 from sklearn.model_selection import train_test_split
 from base_multilabel import MultilabelModel
 from utils.feature_extraction_utils import BagOfWord
-from utils.utils_method import save_classification
+from save_report import save_classification
 """
 Read and preprocess data
 """
@@ -50,7 +50,7 @@ lbl_powerset = MultilabelModel(X_train=X_train_bow, y_train=Y_train, X_test=X_te
                                method='LabelPowerset', num_classes=num_classes)
 y_pred_lbp = lbl_powerset()
 
-save_classification(y_test=Y_test, y_pred=y_pred_lbp, out_dir='./report/Label_Powerset_BOW.csv', labels=labels)
+save_classification(y_test=Y_test, y_pred=y_pred_lbp.toarray(), out_dir='./report/Label_Powerset_BOW.csv', labels=labels)
 
 """### Binary relevence"""
 print("Binary relevence")
@@ -58,14 +58,14 @@ print("Binary relevence")
 bin_relevence = MultilabelModel(X_train=X_train_bow, y_train=Y_train, X_test=X_test_bow, 
                                method='BinaryRelevance', num_classes=num_classes)
 y_pred_binre = bin_relevence()
-save_classification(y_test=Y_test, y_pred=y_pred_binre, out_dir='./report/Binary_Relevence_BOW.csv', labels=labels)
+save_classification(y_test=Y_test, y_pred=y_pred_binre.toarray(), out_dir='./report/Binary_Relevence_BOW.csv', labels=labels)
 
 """### Adapted Algorithm"""
 print("Adapted Algorithm")
 adapt_al = MultilabelModel(X_train=X_train_bow, y_train=Y_train, X_test=X_test_bow, 
                                method='MLkNN', num_classes=num_classes)
 y_pred_adapt = adapt_al()
-save_classification(y_test=Y_test, y_pred=y_pred_adapt.astype(int), out_dir='./report/Adapted_Algorithm_BOW.csv', labels=labels)
+save_classification(y_test=Y_test, y_pred=y_pred_adapt.toarray().astype(int), out_dir='./report/Adapted_Algorithm_BOW.csv', labels=labels)
 
 """### Classifier Chains"""
 print("Classifier Chains")

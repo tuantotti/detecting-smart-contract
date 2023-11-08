@@ -11,9 +11,15 @@ sys.path.append(parent)
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
-from sklearn.metrics import f1_score, accuracy_score, classification_report
-from utils.feature_extraction_utils import TfIdf, BagOfWord
+from sklearn.metrics import f1_score, accuracy_score
+from utils.feature_extraction_utils import TfIdf, BagOfWord, Word2Vec
 from sklearn.model_selection import train_test_split
+from save_report import save_classification
+
+
+from sklearn.preprocessing import MinMaxScaler
+from keras.preprocessing.text import Tokenizer
+from keras.utils import pad_sequences
 from mytokenizer import Tokenizer, pad_sequences
 
 import matplotlib.pyplot as plt
@@ -32,17 +38,31 @@ print(device)
 Create mmultilabel model using LSTM
 """
 class LSTMMultilabel(nn.Module):
-  def __init__(self, vocab_size, hidden_dim, output_dim, n_layers, bidirectional, dropout):
+  def __init__(self, vocab_size, hidden_dim, output_dim, n_layers, dropout, weight, use_embedding=False):
     super(LSTMMultilabel, self).__init__()
 
-    self.lstm = nn.LSTM(vocab_size, hidden_dim, num_layers=n_layers,
-                        bidirectional=bidirectional, dropout=dropout)
+    self.use_embedding = use_embedding
+    self.weight = weight
+    print(dropout)
+
+    if self.use_embedding:
+      self.word_embeddings = nn.Embedding.from_pretrained(self.weight)
+      self.word_embeddings.weight.requires_grad = False
+      self.lstm = nn.LSTM(weight.shape[1], hidden_dim, num_layers=n_layers)
+    else:
+      self.lstm = nn.LSTM(vocab_size, hidden_dim, num_layers=n_layers)
+
     self.dense = nn.Linear(hidden_dim, output_dim)
     self.sigmoid = nn.Sigmoid()
 
-  def forward(self, tfidf_matrix):
-    lstm_out, _ = self.lstm(tfidf_matrix)
-    dense_out = self.dense(lstm_out)
+  def forward(self, sequence):
+    if self.use_embedding == False:
+      lstm_out, _ = self.lstm(sequence)
+      dense_out = self.dense(lstm_out)
+    else:
+      embeds = self.word_embeddings(sequence)
+      lstm_out, _ = self.lstm(embeds)
+      dense_out = self.dense(lstm_out[:, -1, :])
 
     outputs = self.sigmoid(dense_out)
 
@@ -144,6 +164,9 @@ def train(epochs, model, optimizer, criterion, dataloader):
   train_accuracies = []
   valid_accuracies = []
 
+  if os.path.isdir('./trained'):
+     os.mkdir('./trained')
+
   for epoch in range(epochs):
     start_time = time.time()
     train_loss, train_acc, _ = train_steps(data_train_loader, model, criterion, optimizer)
@@ -153,7 +176,7 @@ def train(epochs, model, optimizer, criterion, dataloader):
     # save the best model
     if valid_loss < best_valid_loss:
         best_valid_loss = valid_loss
-        torch.save(model.state_dict(), 'multilabel-lstm.pt')
+        torch.save(model.state_dict(), './trained/multilabel-lstm.pt')
     # append training and validation loss
     train_losses.append(train_loss)
     valid_losses.append(valid_loss)
@@ -184,8 +207,9 @@ def predict(testing_loader, model):
   # empty list to save the model predictions
   total_preds = []
   total_labels = []
+  start_time = time.time()
   # iterate over batches
-  for _, batch in enumerate(testing_loader):
+  for step, batch in enumerate(testing_loader):
       # push the batch to gpu
       inputs = batch[0].to(device)
       labels = batch[1].to(device)
@@ -200,7 +224,9 @@ def predict(testing_loader, model):
           total_preds += list(preds)
           total_labels += labels.tolist()
 
-  return total_preds, total_labels
+  execution_time = (time.time() - start_time) / len(total_labels)
+
+  return total_preds, total_labels,  execution_time
 
 def save_classification(y_test,y_pred, out_dir, labels):
   """
@@ -267,22 +293,39 @@ def run(feature_extraction_method='tfidf'):
   
   elif feature_extraction_method == 'W2V':
     print("Feature Extraction - W2V")
-     
-    
+    max_length = 5500
+    tokenizer = Tokenizer(lower=False)
 
-  X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1, random_state=2023)
+    # Create vocabulary
+    tokenizer.fit_on_texts(X_train)
+
+    # Transforms each text in texts to a sequence of integers
+    sequences_train = tokenizer.texts_to_sequences(X_train)
+    sequences_test = tokenizer.texts_to_sequences(X_test)
+
+    # Pads sequences to the same length
+    word_index = tokenizer.word_index
+    SIZE_OF_VOCAB = len(word_index) + 1
+    word2vec = Word2Vec(word_index)
+    word2vec.train_vocab(X=X_train, embedding_dim=32)
+    embedding_matrix = word2vec()
+
+    X_train = pad_sequences(sequences_train, maxlen=max_length)
+    X_test = pad_sequences(sequences_test, maxlen=max_length)
+
+  X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.2, random_state=2023)
 
   """
   Prepare data
   """
   X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1, random_state=2023)
 
-  tensor_X_train = torch.Tensor(X_train)
-  tensor_X_val = torch.Tensor(X_val)
-  tensor_X_test = torch.Tensor(X_test)
-  tensor_Y_train = torch.Tensor(Y_train)
-  tensor_Y_val = torch.Tensor(Y_val)
-  tensor_Y_test = torch.Tensor(Y_test)
+  tensor_X_train = torch.tensor(X_train)
+  tensor_X_val = torch.tensor(X_val)
+  tensor_X_test = torch.tensor(X_test)
+  tensor_Y_train = torch.FloatTensor(Y_train)
+  tensor_Y_val = torch.FloatTensor(Y_val)
+  tensor_Y_test = torch.FloatTensor(Y_test)
 
   train_dataset = TensorDataset(tensor_X_train, tensor_Y_train)
   val_dataset = TensorDataset(tensor_X_val, tensor_Y_val)
@@ -295,7 +338,12 @@ def run(feature_extraction_method='tfidf'):
   """
   Create model
   """
-  model = LSTMMultilabel(SIZE_OF_VOCAB, NUM_HIDDEN_NODES, NUM_OUTPUT_NODES, NUM_LAYERS, BIDIRECTION, DROPOUT)
+  if feature_extraction_method == 'W2V':
+    model = LSTMMultilabel(vocab_size=SIZE_OF_VOCAB, hidden_dim=NUM_HIDDEN_NODES, 
+                           output_dim=NUM_OUTPUT_NODES, n_layers=NUM_LAYERS, dropout=DROPOUT, 
+                           weight=torch.Tensor(embedding_matrix), use_embedding=True) 
+  else:
+    model = LSTMMultilabel(SIZE_OF_VOCAB, NUM_HIDDEN_NODES, NUM_OUTPUT_NODES, NUM_LAYERS, BIDIRECTION, DROPOUT)
   optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
   criterion = nn.BCELoss()
   """
@@ -312,8 +360,9 @@ def run(feature_extraction_method='tfidf'):
   """
   Evaluate model on test set and save the result
   """
-  y_preds, total_test = predict(data_test_loader, model)
-  save_classification(y_test=total_test, y_pred=y_preds, labels=labels, out_dir='.././report/LSTM_'+feature_extraction_method+'.csv')
+  total_preds, total_labels, execution_time = predict(data_test_loader, model)
+  print('Execution time: ', execution_time)
+  save_classification(y_test=np.array(total_labels), y_pred=np.array(total_preds), labels=labels, out_dir='./report/LSTM_'+feature_extraction_method+'.csv')
 
 """
 Run 
@@ -321,4 +370,6 @@ Run
 if __name__ == '__main__':
   run(feature_extraction_method='TFIDF')  
   run(feature_extraction_method='BOW')  
+  run(feature_extraction_method='W2V')  
+
 

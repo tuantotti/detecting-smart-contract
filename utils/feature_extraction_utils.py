@@ -1,7 +1,7 @@
 import numpy as np
 from gensim.models import FastText
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
-
+import os
 
 class TfIdf:
 
@@ -22,16 +22,18 @@ class TfIdf:
 class Word2Vec:
     def __init__(self, word_index):
         self.word_index = word_index
-        self.fasttext_model = FastText.load('./word2vec/fasttext_model.model')
+        if os.path.isdir('./word2vec'):
+            os.mkdir('./word2vec')
 
     def __call__(self, *args, **kwargs):
+        fasttext_model = FastText.load('./word2vec/fasttext_model.model')
         vocab_size = len(self.word_index) + 1
-        output_dim = 128
+        output_dim = 32
         print(vocab_size)
         embedding_matrix = np.random.random((vocab_size, output_dim))
         for word, i in self.word_index.items():
             try:
-                embedding_vector = self.fasttext_model.wv[word]
+                embedding_vector = fasttext_model.wv[word]
             except:
                 print(word, 'not found')
             if embedding_vector is not None:
